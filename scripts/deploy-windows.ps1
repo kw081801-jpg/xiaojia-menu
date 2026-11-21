@@ -9,7 +9,13 @@ $ErrorActionPreference = "Stop"
 
 $AppDir = "C:\xiaojia-menu"
 $TaskName = "XiaojiaMenu"
-$ZipUrl = "https://ghproxy.net/https://github.com/kw081801-jpg/xiaojia-menu/archive/refs/heads/main.zip"
+$RepoZip = "https://github.com/kw081801-jpg/xiaojia-menu/archive/refs/heads/main.zip"
+$ZipMirrors = @(
+  "https://ghproxy.net/" + $RepoZip,
+  "https://ghfast.top/" + $RepoZip,
+  "https://gh-proxy.com/" + $RepoZip,
+  $RepoZip
+)
 $PyMirrors = @(
   "https://mirrors.huaweicloud.com/python/3.12.10/python-3.12.10-amd64.exe",
   "https://mirrors.aliyun.com/python-release/windows/python-3.12.10-amd64.exe",
@@ -30,7 +36,22 @@ if (Get-NetTCPConnection -LocalPort 80 -State Listen -ErrorAction SilentlyContin
 
 Say "download site files"
 $zip = Join-Path $env:TEMP "xj-menu.zip"
-Invoke-WebRequest -Uri $ZipUrl -OutFile $zip -UseBasicParsing
+$got = $false
+foreach ($u in $ZipMirrors) {
+  for ($try = 1; $try -le 2; $try++) {
+    try {
+      Write-Host "  zip from $u (try $try)"
+      Invoke-WebRequest -Uri $u -OutFile $zip -UseBasicParsing -TimeoutSec 120
+      if ((Get-Item $zip -ErrorAction SilentlyContinue).Length -gt 500KB) { $got = $true; break }
+      Write-Host "  too small, retry"
+    } catch {
+      Write-Host "  failed: $($_.Exception.Message)"
+    }
+    Start-Sleep -Seconds 2
+  }
+  if ($got) { break }
+}
+if (-not $got) { throw "repo zip download failed on all mirrors" }
 $saved = $null
 if (Test-Path (Join-Path $AppDir "data.json")) {
   $saved = Join-Path $env:TEMP ("xj-data-" + [guid]::NewGuid().ToString("N") + ".json")

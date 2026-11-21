@@ -532,7 +532,7 @@ body{
 .cover{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;
   background:#06050a;overflow:hidden;text-align:center}
 .cover-bg{position:absolute;inset:-2%;
-  background-image:url("images/cover.webp");
+  background-image:url("images/cover.webp?v=3");
   background-size:cover;background-position:center;
   transform:scale(1.06);animation:slowZoom 26s ease-in-out infinite alternate;
   filter:brightness(.95) saturate(1.04)}
@@ -708,7 +708,7 @@ body{
 [data-theme="sumikko"] .card:hover::before{transform:rotate(-2deg)}
 [data-theme="sumikko"] .group-title::after{
   content:"";display:inline-block;width:20px;height:20px;margin-left:9px;vertical-align:-3px;
-  background-image:url("images/friends/bear.png");
+  background-image:url("images/friends/bear.png?v=3");
   background-size:contain;background-repeat:no-repeat;opacity:.9
 }
 [data-theme="sumikko"] .sumikko-perch{
@@ -734,7 +734,7 @@ body{
 [data-theme="sumikko"] .empty::before{
   content:"";position:absolute;top:22px;left:50%;transform:translateX(-50%);
   width:64px;height:64px;background-repeat:no-repeat;background-size:contain;opacity:.9;
-  background-image:url("images/friends/bear.png")
+  background-image:url("images/friends/bear.png?v=3")
 }
 [data-theme="sumikko"] .rand-deck{position:relative}
 [data-theme="sumikko"] .rand-deck::before,
@@ -744,11 +744,11 @@ body{
 }
 [data-theme="sumikko"] .rand-deck::before{
   left:calc(50% - 200px);
-  background-image:url("images/friends/cat.png")
+  background-image:url("images/friends/cat.png?v=3")
 }
 [data-theme="sumikko"] .rand-deck::after{
   right:calc(50% - 200px);
-  background-image:url("images/friends/katsu.png")
+  background-image:url("images/friends/katsu.png?v=3")
 }
 @media (max-width:900px){
   [data-theme="sumikko"] .rand-deck::before{left:calc(50% - 150px);width:46px;height:46px}
@@ -908,6 +908,28 @@ textarea.wish-input{resize:vertical;line-height:1.7}
   background-color:var(--accent);color:var(--chip-ink);font:inherit;font-size:15px;cursor:pointer;letter-spacing:.08em}
 .guest-btn:hover{filter:brightness(.96)}
 
+/* ---------- 封面来客信息 ---------- */
+.cover-guest{margin:22px auto 0;max-width:420px;padding:0 16px}
+.cover-ask{margin:0 0 12px;font-family:var(--serif);font-size:clamp(15px,3.6vw,18px);
+  color:#5a4c3d;letter-spacing:.04em;text-shadow:0 1px 0 rgba(255,255,255,.6)}
+.cover-fields{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.cover-field{display:flex;align-items:center;gap:8px;padding:7px 12px;border-radius:999px;
+  background:rgba(255,253,249,.72);border:1px solid rgba(150,125,100,.22);
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.cover-field span{font-size:11px;color:#8d8073;letter-spacing:.12em}
+.cover-field input{border:0;background:transparent;color:#4b4139;font:inherit;font-size:14px;outline:none;
+  width:96px;padding:0}
+.cover-field input[type=date]{width:112px}
+.cover-field input::placeholder{color:#b3a99c}
+[data-theme="sumikko"] .cover-field{background:rgba(255,253,249,.82);border-color:rgba(127,184,174,.45)}
+[data-theme="sumikko"] .cover-ask{color:#4b4139}
+
+@media (max-width:600px){
+  .cover-guest{margin-top:16px}
+  .cover-field input{width:84px}
+  .cover-field input[type=date]{width:104px}
+}
+
 @media (prefers-reduced-motion:reduce){
   .cover-bg{animation:none}
   .cover-inner,.cover-eyebrow,.cover-divider,.cover-sub,.cover-enter{animation:none}
@@ -966,17 +988,30 @@ textarea.wish-input{resize:vertical;line-height:1.7}
       <div class="cover-eyebrow" id="coverEyebrow">HOME KITCHEN</div>
       <div class="cover-divider"></div>
       <p class="cover-sub" id="coverSub">今天想吃点什么？</p>
-      <button class="cover-enter" id="coverEnter">看看菜单 →</button>
+      <div class="cover-guest">
+        <p class="cover-ask" id="coverAsk">「今天」的客人是？</p>
+        <div class="cover-fields">
+          <label class="cover-field">
+            <span>日期</span>
+            <input id="coverDate" type="date" />
+          </label>
+          <label class="cover-field">
+            <span>客人</span>
+            <input id="coverName" type="text" maxlength="20" placeholder="神秘来客" />
+          </label>
+        </div>
+      </div>
+      <button class="cover-enter" id="coverEnter">开始点菜 →</button>
     </div>
     <div class="sumikko-friends" aria-hidden="true">
-      <img class="sk s-bear" src="images/friends/bear.png" alt="" />
-      <img class="sk s-tapioca" src="images/friends/tapioca.png" alt="" />
-      <img class="sk s-lizard" src="images/friends/lizard.png" alt="" />
-      <img class="sk s-cat" src="images/friends/cat.png" alt="" />
-      <img class="sk s-katsu" src="images/friends/katsu.png" alt="" />
+      <img class="sk s-bear" src="images/friends/bear.png?v=3" alt="" />
+      <img class="sk s-tapioca" src="images/friends/tapioca.png?v=3" alt="" />
+      <img class="sk s-lizard" src="images/friends/lizard.png?v=3" alt="" />
+      <img class="sk s-cat" src="images/friends/cat.png?v=3" alt="" />
+      <img class="sk s-katsu" src="images/friends/katsu.png?v=3" alt="" />
     </div>
-    <img class="sk-corner cl" src="images/friends/cat.png" alt="" />
-    <img class="sk-corner cr" src="images/friends/katsu.png" alt="" />
+    <img class="sk-corner cl" src="images/friends/cat.png?v=3" alt="" />
+    <img class="sk-corner cr" src="images/friends/katsu.png?v=3" alt="" />
   </div>
 
   <header class="topbar">
@@ -1021,16 +1056,16 @@ textarea.wish-input{resize:vertical;line-height:1.7}
     <span id="count"></span>
     <span class="hint">点开看看口味，选好了交给我</span>
     <div class="sumikko-foot" aria-hidden="true">
-      <img class="sk" src="images/friends/bear.png" alt="" />
-      <img class="sk" src="images/friends/tapioca.png" alt="" />
-      <img class="sk" src="images/friends/lizard.png" alt="" />
-      <img class="sk" src="images/friends/penguin.png" alt="" />
-      <img class="sk" src="images/friends/ebi.png" alt="" />
+      <img class="sk" src="images/friends/bear.png?v=3" alt="" />
+      <img class="sk" src="images/friends/tapioca.png?v=3" alt="" />
+      <img class="sk" src="images/friends/lizard.png?v=3" alt="" />
+      <img class="sk" src="images/friends/penguin.png?v=3" alt="" />
+      <img class="sk" src="images/friends/ebi.png?v=3" alt="" />
     </div>
   </footer>
 
-  <img class="sumikko-side left" src="images/friends/cat.png" alt="" />
-  <img class="sumikko-side right" src="images/friends/katsu.png" alt="" />
+  <img class="sumikko-side left" src="images/friends/cat.png?v=3" alt="" />
+  <img class="sumikko-side right" src="images/friends/katsu.png?v=3" alt="" />
 
   <div id="guest" class="guest" hidden>
     <div class="guest-backdrop"></div>
@@ -1077,7 +1112,7 @@ textarea.wish-input{resize:vertical;line-height:1.7}
     <div class="modal-backdrop" data-close></div>
     <div class="modal-card" role="dialog" aria-modal="true" aria-label="菜品详情">
       <button class="modal-close" data-close aria-label="关闭">✕</button>
-      <img class="sumikko-perch" src="images/friends/bear.png" alt="" />
+      <img class="sumikko-perch" id="perchImg" src="images/friends/bear.png?v=3" alt="" />
       <div id="detail-body"></div>
     </div>
   </div>
@@ -1536,6 +1571,11 @@ textarea.wish-input{resize:vertical;line-height:1.7}
       "</div>";
 
     $("#detail-body").innerHTML = body;
+    var perch = $("#perchImg");
+    if (perch) {
+      var pc = catMap[d.cat];
+      perch.src = "images/friends/" + (pc && pc.icon ? pc.icon : "bear") + ".png?v=3";
+    }
     var m = $("#detail");
     m.hidden = false;
     m.querySelector(".modal-card").scrollTop = 0;
@@ -1748,13 +1788,6 @@ textarea.wish-input{resize:vertical;line-height:1.7}
     document.body.style.overflow = "";
   }
 
-  document.addEventListener("click", function (e) {
-    if (e.target.closest("#guestOk")) closeGuest(true);
-  });
-  document.addEventListener("keydown", function (e) {
-    if (e.key === "Enter" && $("#guest") && !$("#guest").hidden) closeGuest(true);
-  });
-
   // ---------- 今晚菜单（点菜） ----------
   function toast(msg) {
     var t = document.getElementById("toast");
@@ -1883,10 +1916,29 @@ textarea.wish-input{resize:vertical;line-height:1.7}
     render();
 
     var cover = $("#cover");
+    var dateEl = $("#coverDate");
+    var nameEl = $("#coverName");
+    var askEl = $("#coverAsk");
+
+    function refreshAsk() {
+      if (!askEl) return;
+      askEl.textContent = "「" + dateLabel(dateEl.value) + "」的客人是？";
+    }
+    if (dateEl) {
+      dateEl.value = (state.guest && state.guest.date) || todayStr();
+      nameEl.value = (state.guest && state.guest.name) || "神秘来客";
+      refreshAsk();
+      dateEl.addEventListener("change", refreshAsk);
+    }
+
     function enter() {
+      state.guest = {
+        date: (dateEl && dateEl.value) || todayStr(),
+        name: ((nameEl && nameEl.value) || "").trim() || "神秘来客"
+      };
+      try { localStorage.setItem("xj_guest", JSON.stringify(state.guest)); } catch (e) {}
       cover.classList.add("hide");
       setTimeout(function () { cover.style.display = "none"; }, 900);
-      if (!state.guest) setTimeout(openGuest, 400);
     }
     $("#coverEnter").addEventListener("click", enter);
     cover.addEventListener("click", function (e) {

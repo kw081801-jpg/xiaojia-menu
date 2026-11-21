@@ -118,10 +118,14 @@ Remove-NetFirewallRule -DisplayName $ruleName -ErrorAction SilentlyContinue
 New-NetFirewallRule -DisplayName $ruleName -Direction Inbound -Action Allow -Protocol TCP -LocalPort $Port | Out-Null
 
 Say "register startup task"
-$cmd = "`"$py`" `"$AppDir\server.py`" --port $Port"
-schtasks /Delete /TN $TaskName /F 2>$null | Out-Null
-schtasks /Create /TN $TaskName /TR $cmd /SC ONSTART /RU SYSTEM /RL HIGHEST /F | Out-Null
-schtasks /Run /TN $TaskName | Out-Null
+$action = New-ScheduledTaskAction -Execute $py -Argument ('"{0}" --port {1}' -f (Join-Path $AppDir "server.py"), $Port) -WorkingDirectory $AppDir
+$trigger = New-ScheduledTaskTrigger -AtStartup
+$principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
+$settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1) -ExecutionTimeLimit ([TimeSpan]::Zero)
+Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false -ErrorAction SilentlyContinue
+Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -Principal $principal -Settings $settings | Out-Null
+Start-ScheduledTask -TaskName $TaskName
+Write-Host "task $TaskName registered (at startup, running now)"
 Start-Sleep -Seconds 5
 
 Say "self check"

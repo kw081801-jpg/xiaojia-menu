@@ -11,9 +11,9 @@ $AppDir = "C:\xiaojia-menu"
 $TaskName = "XiaojiaMenu"
 $RepoZip = "https://github.com/kw081801-jpg/xiaojia-menu/archive/refs/heads/main.zip"
 $ZipMirrors = @(
+  "https://gh-proxy.com/" + $RepoZip,
   "https://ghproxy.net/" + $RepoZip,
   "https://ghfast.top/" + $RepoZip,
-  "https://gh-proxy.com/" + $RepoZip,
   $RepoZip
 )
 $PyMirrors = @(

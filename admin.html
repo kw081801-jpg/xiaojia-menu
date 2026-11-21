@@ -170,6 +170,20 @@ textarea{resize:vertical;line-height:1.65}
         <div style="height:16px"></div>
         <button id="saveSettings" class="btn">保存</button>
       </div>
+
+      <div class="card">
+        <h3 style="font-size:17px;margin-bottom:6px">大模型（自动补全用）</h3>
+        <p class="hint" style="margin:0 0 10px">填 OpenAI 兼容接口即可。DeepSeek 地址 https://api.deepseek.com ，模型 deepseek-chat</p>
+        <div class="row">
+          <div><label>接口地址</label><input id="llmBase" type="text" placeholder="https://api.deepseek.com" /></div>
+          <div><label>模型</label><input id="llmModel" type="text" placeholder="deepseek-chat" /></div>
+        </div>
+        <label>API Key</label>
+        <input id="llmKey" type="password" placeholder="留空表示不修改" autocomplete="new-password" />
+        <div style="height:14px"></div>
+        <button id="saveLlm" class="btn">保存大模型设置</button>
+        <span class="hint" id="llmState" style="margin-left:10px"></span>
+      </div>
     </section>
   </div>
 </div>
@@ -307,7 +321,7 @@ textarea{resize:vertical;line-height:1.65}
     api("api/menu").then(function (j) {
       SETTINGS = j.settings || {};
       ITEMS = j.items || [];
-      renderMenu(); fillSettings(); fillCats();
+      renderMenu(); fillSettings(); fillCats(); loadLlm();
     });
     loadOrders();
   }
@@ -553,6 +567,28 @@ textarea{resize:vertical;line-height:1.65}
     $("#sEnter").value = SETTINGS.enterLabel || "";
     $("#sBrand").value = SETTINGS.brand || "";
   }
+  function loadLlm() {
+    api("api/llm").then(function (j) {
+      $("#llmBase").value = j.base || "";
+      $("#llmModel").value = j.model || "";
+      $("#llmKey").value = "";
+      $("#llmKey").placeholder = j.hasKey ? "已配置，留空不改" : "sk-...";
+      $("#llmState").textContent = j.hasKey ? "已配置" : "未配置，自动补全只能用内置菜谱库";
+    }).catch(function () {});
+  }
+  $("#saveLlm").addEventListener("click", function () {
+    var body = {
+      base: $("#llmBase").value.trim(),
+      model: $("#llmModel").value.trim()
+    };
+    var k = $("#llmKey").value.trim();
+    if (k) body.key = k; else body.key = "__keep__";
+    api("api/llm", { method: "POST", body: { llm: body } }).then(function () {
+      toast("大模型设置已保存");
+      loadLlm();
+    });
+  });
+
   $("#saveSettings").addEventListener("click", function () {
     SETTINGS.title = $("#sTitle").value;
     SETTINGS.subtitle = $("#sSubtitle").value;

@@ -58,13 +58,14 @@ def normalize_settings(st):
 
 def load():
     if not os.path.exists(DATA):
-        return {"settings": {}, "items": [], "orders": [], "wishes": []}
+        return {"settings": {}, "items": [], "orders": [], "wishes": [], "llm": {}}
     with open(DATA, encoding="utf-8") as f:
         d = json.load(f)
     d.setdefault("settings", {})
     d.setdefault("items", [])
     d.setdefault("orders", [])
     d.setdefault("wishes", [])
+    d.setdefault("llm", {})
     return d
 
 
@@ -230,42 +231,69 @@ def load_recipes():
         return {}
 
 
+def llm_conf():
+    env_key = os.environ.get("DEEPSEEK_API_KEY", "") or os.environ.get("OPENAI_API_KEY", "")
+    with LOCK:
+        d = load()
+    conf = d.get("llm") or {}
+    key = conf.get("key") or env_key
+    base = (conf.get("base") or ("https://api.deepseek.com" if os.environ.get("DEEPSEEK_API_KEY")
+                                 else "https://api.openai.com/v1")).rstrip("/")
+    model = conf.get("model") or ("deepseek-chat" if os.environ.get("DEEPSEEK_API_KEY") else "gpt-4o-mini")
+    return key, base, model
+
+
+PROMPT = (
+    "你是家常菜谱助手。为菜品「%s」生成上架信息，只输出 JSON，不要解释。字段："
+    '{"en":"英文名","cat":"home|soup|staple|sweet|drink 里选一个",'
+    '"flavor":"两个词的口味，如 麻辣 · 烫口","time":"如 20 分钟","level":"新手|顺手|慢炖",'
+    '"serve":"如 2 人份","intro":"一句让人想吃的话，只写口感和味道，不要写做法",'
+    '"ingredients":["食材 用量"],"steps":["做法步骤"],"tips":"一句做菜提示"}'
+    "。cat 含义：home 家常菜、soup 汤羹、staple 主食、sweet 甜品、drink 饮品。"
+    "intro 不超过 24 个字，绝对不能出现「先…再…」「分钟」「小火」这类做法描述。"
+)
+
+
+def call_llm(name):
+    key, base, model = llm_conf()
+    if not key:
+        return None
+    body = json.dumps({
+        "model": model,
+        "messages": [{"role": "user", "content": PROMPT % name}],
+        "response_format": {"type": "json_object"},
+        "temperature": 0.4,
+    }).encode()
+    req = urllib.request.Request(base + "/chat/completions", data=body, headers={
+        "Content-Type": "application/json", "Authorization": "Bearer " + key})
+    with urllib.request.urlopen(req, timeout=45) as r:
+        data = json.loads(r.read().decode())
+    out = json.loads(data["choices"][0]["message"]["content"])
+    if not isinstance(out.get("ingredients"), list):
+        out["ingredients"] = []
+    if not isinstance(out.get("steps"), list):
+        out["steps"] = []
+    return out
+
+
 def autofill(name):
-    """先查内置菜谱库；没有但配了大模型 key，就让模型写一份。"""
+    """先大模型（自动分类/口味/介绍），失败或没配 key 时退回内置菜谱库。"""
     name = name.strip()
     if not name:
         return None
+    try:
+        out = call_llm(name)
+        if out:
+            return out
+    except Exception as e:
+        sys.stderr.write("llm error: %s\n" % e)
     lib = load_recipes()
     if name in lib:
         return lib[name]
     for k, v in lib.items():
         if k in name or name in k:
             return v
-    if not LLM_KEY:
-        return None
-    prompt = (
-        "你是家常菜谱助手。为「%s」写一份中文菜谱，只输出 JSON，字段："
-        '{"en":"英文名","cat":"home|soup|staple|sweet|drink","flavor":"口味词 · 口味词",'
-        '"time":"20 分钟","level":"新手|顺手|慢炖","serve":"2 人份","tag":"招牌|上菜快|空字符串",'
-        '"intro":"一句话介绍","ingredients":["食材 用量"],"steps":["步骤"],"tips":"一句提示"}'
-        "。共 4-6 条食材、3-5 个步骤，别输出多余文字。" % name
-    )
-    body = json.dumps({
-        "model": "deepseek-chat" if os.environ.get("DEEPSEEK_API_KEY") else "gpt-4o-mini",
-        "messages": [{"role": "user", "content": prompt}],
-        "response_format": {"type": "json_object"},
-        "temperature": 0.3,
-    }).encode()
-    url = ("https://api.deepseek.com/chat/completions" if os.environ.get("DEEPSEEK_API_KEY")
-           else "https://api.openai.com/v1/chat/completions")
-    req = urllib.request.Request(url, data=body, headers={
-        "Content-Type": "application/json", "Authorization": "Bearer " + LLM_KEY})
-    try:
-        with urllib.request.urlopen(req, timeout=40) as r:
-            data = json.loads(r.read().decode())
-        return json.loads(data["choices"][0]["message"]["content"])
-    except Exception:
-        return None
+    return None
 
 
 def find_images(q, name=""):
@@ -406,6 +434,11 @@ class H(BaseHTTPRequestHandler):
             return self.json({"settings": normalize_settings(d["settings"]), "items": d["items"]})
         if p.path == "/api/session":
             return self.json({"ok": self.admin()})
+        if p.path == "/api/llm":
+            if not self.need_admin():
+                return
+            key, base, model = llm_conf()
+            return self.json({"base": base, "model": model, "hasKey": bool(key)})
         if p.path == "/api/autofill":
             if not self.need_admin():
                 return
@@ -529,6 +562,19 @@ class H(BaseHTTPRequestHandler):
                     d["items"].append(it)
                 save(d)
             return self.json({"ok": True, "item": it})
+        if p == "/api/llm":
+            if not self.need_admin():
+                return
+            conf = {k: str(v).strip() for k, v in (b.get("llm") or {}).items() if v is not None}
+            with LOCK:
+                d = load()
+                cur = d.get("llm") or {}
+                if conf.get("key") == "__keep__":
+                    conf.pop("key", None)
+                cur.update({k: v for k, v in conf.items() if k in ("key", "base", "model")})
+                d["llm"] = cur
+                save(d)
+            return self.json({"ok": True})
         if p == "/api/settings":
             if not self.need_admin():
                 return

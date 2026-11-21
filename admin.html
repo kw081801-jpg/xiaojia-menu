@@ -178,13 +178,18 @@ textarea{resize:vertical;line-height:1.65}
       <button class="mini" data-close>✕</button>
     </div>
     <div class="row">
-      <div><label>菜名 *</label><input id="fName" type="text" /></div>
+      <div><label>菜名 *</label>
+        <div style="display:flex;gap:8px">
+          <input id="fName" type="text" style="flex:1" />
+          <button id="autoFill" class="mini" type="button" style="white-space:nowrap">✨ 自动补全</button>
+        </div>
+      </div>
       <div><label>英文名</label><input id="fEn" type="text" /></div>
     </div>
     <div class="row3">
       <div><label>分类</label><select id="fCat"></select></div>
       <div><label>口味</label><input id="fFlavor" type="text" placeholder="酸甜 · 下饭" /></div>
-      <div><label>角标</label><input id="fTag" type="text" placeholder="招牌 / 快手" /></div>
+      <div><label>角标</label><input id="fTag" type="text" placeholder="招牌 / 上菜快" /></div>
     </div>
     <div class="row3">
       <div><label>耗时</label><input id="fTime" type="text" placeholder="20 分钟" /></div>
@@ -336,6 +341,37 @@ textarea{resize:vertical;line-height:1.65}
       return '<option value="' + esc(c.key) + '">' + esc(c.label) + "</option>";
     }).join("");
   }
+
+  function fillForm(v) {
+    if (!v) return;
+    var map = { fEn: "en", fFlavor: "flavor", fTime: "time", fLevel: "level", fServe: "serve",
+                fIntro: "intro", fTips: "tips", fTag: "tag" };
+    Object.keys(map).forEach(function (id) {
+      if (v[map[id]] != null) $("#" + id).value = v[map[id]];
+    });
+    if (v.cat) $("#fCat").value = v.cat;
+    if (Array.isArray(v.ingredients)) $("#fIng").value = v.ingredients.join("\n");
+    if (Array.isArray(v.steps)) $("#fSteps").value = v.steps.join("\n");
+  }
+
+  $("#autoFill").addEventListener("click", function () {
+    var name = ($("#fName").value || "").trim();
+    if (!name) { toast("先把菜名写上"); return; }
+    var btn = this;
+    btn.disabled = true;
+    btn.textContent = "查…";
+    api("api/autofill?name=" + encodeURIComponent(name)).then(function (j) {
+      btn.disabled = false;
+      btn.textContent = "✨ 自动补全";
+      if (!j.found) { toast("字库里没有这道，填几项我记下来也行"); return; }
+      fillForm(j.item);
+      toast("补好了，图点右边「找图」");
+    }).catch(function () {
+      btn.disabled = false;
+      btn.textContent = "✨ 自动补全";
+      toast("查询失败");
+    });
+  });
 
   function openEditor(d) {
     EDITING = d || null;

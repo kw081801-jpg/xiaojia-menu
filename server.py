@@ -27,6 +27,8 @@ DATA = os.path.join(ROOT, "data.json")
 UPLOADS = os.path.join(ROOT, "images", "uploads")
 PASSWORD = os.environ.get("XJ_ADMIN_PASSWORD", "xiaojia")
 PEXELS_KEY = os.environ.get("PEXELS_API_KEY", "")
+LLM_KEY = os.environ.get("DEEPSEEK_API_KEY", "") or os.environ.get("OPENAI_API_KEY", "")
+RECIPES_PATH = os.path.join(ROOT, "recipes.json")
 UA = "XiaojiaMenu/1.0 (+personal use)"
 UA_BROWSER = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
 LOCK = threading.Lock()
@@ -188,6 +190,52 @@ def search_pexels(q):
     } for p in data.get("photos", [])]
 
 
+def load_recipes():
+    try:
+        with open(RECIPES_PATH, encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+def autofill(name):
+    """先查内置菜谱库；没有但配了大模型 key，就让模型写一份。"""
+    name = name.strip()
+    if not name:
+        return None
+    lib = load_recipes()
+    if name in lib:
+        return lib[name]
+    for k, v in lib.items():
+        if k in name or name in k:
+            return v
+    if not LLM_KEY:
+        return None
+    prompt = (
+        "你是家常菜谱助手。为「%s」写一份中文菜谱，只输出 JSON，字段："
+        '{"en":"英文名","cat":"home|soup|staple|sweet|drink","flavor":"口味词 · 口味词",'
+        '"time":"20 分钟","level":"新手|顺手|慢炖","serve":"2 人份","tag":"招牌|上菜快|空字符串",'
+        '"intro":"一句话介绍","ingredients":["食材 用量"],"steps":["步骤"],"tips":"一句提示"}'
+        "。共 4-6 条食材、3-5 个步骤，别输出多余文字。" % name
+    )
+    body = json.dumps({
+        "model": "deepseek-chat" if os.environ.get("DEEPSEEK_API_KEY") else "gpt-4o-mini",
+        "messages": [{"role": "user", "content": prompt}],
+        "response_format": {"type": "json_object"},
+        "temperature": 0.3,
+    }).encode()
+    url = ("https://api.deepseek.com/chat/completions" if os.environ.get("DEEPSEEK_API_KEY")
+           else "https://api.openai.com/v1/chat/completions")
+    req = urllib.request.Request(url, data=body, headers={
+        "Content-Type": "application/json", "Authorization": "Bearer " + LLM_KEY})
+    try:
+        with urllib.request.urlopen(req, timeout=40) as r:
+            data = json.loads(r.read().decode())
+        return json.loads(data["choices"][0]["message"]["content"])
+    except Exception:
+        return None
+
+
 def find_images(q, name=""):
     key = (q + "|" + name).lower().strip()
     hit = SEARCH_CACHE.get(key)
@@ -325,6 +373,12 @@ class H(BaseHTTPRequestHandler):
             return self.json({"settings": normalize_settings(d["settings"]), "items": d["items"]})
         if p.path == "/api/session":
             return self.json({"ok": self.admin()})
+        if p.path == "/api/autofill":
+            if not self.need_admin():
+                return
+            name = (qs.get("name") or [""])[0].strip()
+            item = autofill(name)
+            return self.json({"found": bool(item), "item": item or {}})
         if p.path == "/api/wishes":
             if not self.need_admin():
                 return

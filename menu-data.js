@@ -256,7 +256,7 @@ window.MENU_ITEMS = [
     time: "8 分钟",
     level: "新手",
     serve: "2 人份",
-    tag: "快手",
+    tag: "上菜快",
     intro: "五分钟能上桌的救命汤。",
     ingredients: ["紫菜 1 小把", "鸡蛋 1 个", "虾皮 1 小勺", "香油 几滴", "盐 适量", "白胡椒 适量", "小葱 1 根"],
     steps: [
@@ -315,7 +315,7 @@ window.MENU_ITEMS = [
     time: "15 分钟",
     level: "新手",
     serve: "1 人份",
-    tag: "快手",
+    tag: "上菜快",
     intro: "葱油熬得好，一碗面就够了。",
     ingredients: ["细面 150g", "小葱 1 把", "生抽 2 勺", "老抽 半勺", "白糖 1 小勺", "食用油 4 勺"],
     steps: [

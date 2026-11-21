@@ -1284,7 +1284,7 @@ body{
         '<div class="group-head-main">' +
           '<span class="accent-dot" aria-hidden="true"></span>' +
           '<h2 class="group-title">' + esc(g.label) + "</h2>" +
-          (g.icon ? '<img class="cat-glyph" src="images/friends/' + esc(g.icon) + '.png" alt="" loading="lazy" />' : "") +
+          (g.icon ? '<img class="cat-glyph" src="images/friends/' + esc(g.icon) + '.png" alt="" loading="lazy" onerror="this.onerror=null;this.src=\'images/friends/bear.png\'" />' : "") +
           '<span class="group-chevron" aria-hidden="true">▼</span>' +
         "</div>" +
         (g.note ? '<span class="group-note">' + esc(g.note) + "</span>" : "");

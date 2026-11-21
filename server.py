@@ -38,6 +38,17 @@ mimetypes.add_type("font/woff2", ".woff2")
 
 # ---------------------------------------------------------------- 数据
 
+ICON_ALIAS = {"wok": "katsu", "pot": "penguin", "bowl": "bear", "cake": "tapioca", "cup": "lizard"}
+
+
+def normalize_settings(st):
+    """老数据里的线稿图标名（wok/pot/...）映射成角色图名，避免前台裂图。"""
+    for c in (st.get("categories") or []):
+        if c.get("icon") in ICON_ALIAS:
+            c["icon"] = ICON_ALIAS[c["icon"]]
+    return st
+
+
 def load():
     if not os.path.exists(DATA):
         return {"settings": {}, "items": [], "orders": []}
@@ -244,7 +255,7 @@ class H(BaseHTTPRequestHandler):
         if p.path == "/api/menu":
             with LOCK:
                 d = load()
-            return self.json({"settings": d["settings"], "items": d["items"]})
+            return self.json({"settings": normalize_settings(d["settings"]), "items": d["items"]})
         if p.path == "/api/session":
             return self.json({"ok": self.admin()})
         if p.path == "/api/orders":

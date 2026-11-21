@@ -259,3 +259,39 @@ server {
 sudo apt install -y nginx certbot python3-certbot-nginx
 sudo certbot --nginx -d menu.example.com
 ```
+
+## 安全：不要把 8080 对全网放开
+
+`server.py` 自身只有一层密码，管理台和点菜接口共用一个端口，直接 `0.0.0.0:8080` 意味着全世界的扫描器都能敲到登录接口。三档做法，按你的需求选：
+
+### 档 1：只让自己访问（最快，适合家里用）
+
+Windows 防火墙规则限定来源 IP：
+
+```powershell
+Remove-NetFirewallRule -DisplayName "Xiaojia Menu 8080" -ErrorAction SilentlyContinue
+New-NetFirewallRule -DisplayName "Xiaojia Menu 8080" -Direction Inbound -Action Allow `
+  -Protocol TCP -LocalPort 8080 -RemoteAddress 你家的公网IP
+```
+
+腾讯云控制台防火墙同样把来源改成那个 IP。IP 变了就改一次，或者用宽带拨号后的 DDNS 脚本自动更新。
+
+### 档 2：前台公开、后台只对自己开放（推荐）
+
+1. `server.py` 只听本机：`python server.py --host 127.0.0.1 --port 8080`
+2. 前面挂 Nginx（配置见 `scripts/nginx-xiaojia.conf`）
+3. Nginx 只放行 443；`/admin.html` 和写接口按 IP 白名单
+4. 腾讯云防火墙只开 443
+
+这样别人能看菜单、能点菜，但摸不到管理台。
+
+### 档 3：完整做法
+
+档 2 的基础上再加：域名 + Let's Encrypt 证书、`fail2ban`（Windows 可用 Wail2ban）、定期备份 `data.json`。
+
+### 已经内置的保护
+
+- 登录失败 5 次锁 5 分钟（按 IP 计，走 `X-Forwarded-For` 时按真实 IP）
+- 管理接口全部要登录态，Cookie 是 HttpOnly + SameSite=Lax
+- 用默认密码启动会在控制台打印警告
+- 上传只接受 png/jpg/webp，单张上限 8MB

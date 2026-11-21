@@ -32,6 +32,9 @@ UA_BROWSER = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTM
 LOCK = threading.Lock()
 SESSIONS = {}          # token -> 过期时间戳
 SEARCH_CACHE = {}      # 关键词 -> (时间戳, 结果)
+LOGIN_FAILS = {}       # ip -> [失败次数, 解锁时间]
+MAX_FAILS = 5
+LOCK_SECONDS = 300
 
 mimetypes.add_type("image/webp", ".webp")
 mimetypes.add_type("font/woff2", ".woff2")
@@ -228,6 +231,10 @@ class H(BaseHTTPRequestHandler):
         except Exception:
             return {}
 
+    def client_ip(self):
+        fwd = (self.headers.get("X-Forwarded-For") or "").split(",")[0].strip()
+        return fwd or self.client_address[0]
+
     def token(self):
         for part in (self.headers.get("Cookie") or "").split(";"):
             k, _, v = part.strip().partition("=")
@@ -298,8 +305,18 @@ class H(BaseHTTPRequestHandler):
         b = self.body()
 
         if p == "/api/login":
+            ip = self.client_ip()
+            now = time.time()
+            rec = LOGIN_FAILS.get(ip)
+            if rec and rec[0] >= MAX_FAILS and now < rec[1]:
+                return self.json({"error": "试错太多，等 %d 秒" % int(rec[1] - now)}, 429)
             if not secrets.compare_digest(str(b.get("password", "")), PASSWORD):
+                rec = LOGIN_FAILS.setdefault(ip, [0, 0.0])
+                rec[0] += 1
+                if rec[0] >= MAX_FAILS:
+                    rec[1] = now + LOCK_SECONDS
                 return self.json({"error": "密码不对"}, 401)
+            LOGIN_FAILS.pop(ip, None)
             tok = secrets.token_urlsafe(24)
             SESSIONS[tok] = time.time() + 7 * 86400
             return self.json({"ok": True}, cookie="xj_admin=%s; Path=/; HttpOnly; SameSite=Lax; Max-Age=%d" % (tok, 7 * 86400))
@@ -455,6 +472,10 @@ def main():
         if a == "--host":
             host = argv[i + 1]
     os.makedirs(UPLOADS, exist_ok=True)
+    if PASSWORD == "xiaojia":
+        print("!! 正在使用默认密码 xiaojia，公网部署请务必设置 XJ_ADMIN_PASSWORD")
+    if host == "0.0.0.0":
+        print("!! 监听 0.0.0.0，管理台对所有能连上的人开放；建议 --host 127.0.0.1 并用 Nginx 反代")
     print("小家菜单：http://127.0.0.1:%d/   管理台 /admin.html" % port)
     print("数据：%s" % DATA)
     ThreadingHTTPServer((host, port), H).serve_forever()

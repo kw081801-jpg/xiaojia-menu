@@ -35,24 +35,45 @@ Remove-Item $tmp, $zip -Recurse -Force -ErrorAction SilentlyContinue
 Write-Host "files -> $AppDir"
 
 Say "check python"
-$py = $null
-$candidates = @(
-  "C:\Program Files\Python312\python.exe",
-  "C:\Program Files\Python311\python.exe",
-  "$env:LOCALAPPDATA\Programs\Python\Python312\python.exe"
-)
-foreach ($c in $candidates) { if (Test-Path $c) { $py = $c; break } }
-if (-not $py) {
-  $w = Get-Command python.exe -ErrorAction SilentlyContinue
-  if ($w) { $py = $w.Source }
+function Find-Python {
+  $cands = @()
+  foreach ($k in @("HKLM:\SOFTWARE\Python\PythonCore", "HKLM:\SOFTWARE\WOW6432Node\Python\PythonCore", "HKCU:\SOFTWARE\Python\PythonCore")) {
+    if (Test-Path $k) {
+      Get-ChildItem $k -ErrorAction SilentlyContinue | ForEach-Object {
+        $ip = Get-ItemProperty "$($_.PSPath)\InstallPath" -ErrorAction SilentlyContinue
+        if ($ip -and $ip.'(default)') { $cands += (Join-Path $ip.'(default)' "python.exe") }
+      }
+    }
+  }
+  foreach ($d in @("C:\Program Files\Python312", "C:\Program Files\Python311", "C:\Program Files\Python310",
+                   "C:\Python312", "C:\Python311", "C:\Python310",
+                   "$env:LOCALAPPDATA\Programs\Python\Python312", "$env:LOCALAPPDATA\Programs\Python\Python311")) {
+    $p = Join-Path $d "python.exe"
+    if (Test-Path $p) { $cands += $p }
+  }
+  foreach ($n in @("python.exe", "python3.exe", "py.exe")) {
+    $w = Get-Command $n -ErrorAction SilentlyContinue
+    if ($w) { $cands += $w.Source }
+  }
+  foreach ($c in ($cands | Select-Object -Unique)) {
+    if ($c -like "*WindowsApps*") { continue }   # App Store stub, not a real python
+    try {
+      $v = & $c -c "import sys;print(sys.version.split()[0])" 2>&1
+      if ($LASTEXITCODE -eq 0) { return $c }
+    } catch { }
+  }
+  return $null
 }
+
+$py = Find-Python
+if ($py) { Write-Host "found existing python: $py" }
 if (-not $py) {
   Say "install python 3.12 (~60s)"
   $exe = Join-Path $env:TEMP "py-install.exe"
   Invoke-WebRequest -Uri $PyUrl -OutFile $exe -UseBasicParsing
   Start-Process -FilePath $exe -ArgumentList "/quiet InstallAllUsers=1 PrependPath=1 Include_test=0" -Wait
   Start-Sleep -Seconds 3
-  foreach ($c in $candidates) { if (Test-Path $c) { $py = $c; break } }
+  $py = Find-Python
 }
 if (-not $py) { throw "python not installed" }
 Write-Host "python: $py  $(& $py -V)"

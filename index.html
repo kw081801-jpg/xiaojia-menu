@@ -1598,6 +1598,7 @@ textarea.wish-input{resize:vertical;line-height:1.7}
             '<p class="detail-en">' + esc(d.en || "—") + "</p>" +
           "</div>" +
         "</div>" +
+        (d.intro ? '<p class="detail-intro">' + esc(d.intro) + "</p>" : "") +
         (tags.length ? '<div class="detail-tags">' + tags.join("") + "</div>" : "") +
         (state.online
           ? '<button class="btn-order" data-order="' + esc(itemId(d)) + '">＋ 加入今晚菜单</button>'

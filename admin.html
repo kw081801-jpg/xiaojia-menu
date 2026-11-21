@@ -373,7 +373,7 @@ textarea{resize:vertical;line-height:1.65}
   function fillForm(v) {
     if (!v) return;
     var map = { fEn: "en", fFlavor: "flavor", fTime: "time", fLevel: "level", fServe: "serve",
-                fTips: "tips" };
+                fIntro: "intro", fTips: "tips" };
     Object.keys(map).forEach(function (id) {
       if (v[map[id]] != null) $("#" + id).value = v[map[id]];
     });
@@ -393,13 +393,35 @@ textarea{resize:vertical;line-height:1.65}
       btn.textContent = "✨ 自动补全";
       if (!j.found) { toast("字库里没有这道，填几项我记下来也行"); return; }
       fillForm(j.item);
-      toast("补好了，图点右边「找图」");
+      autoImage(name);
+      toast("补好了，正在找图…");
     }).catch(function () {
       btn.disabled = false;
       btn.textContent = "✨ 自动补全";
       toast("查询失败");
     });
   });
+
+  function autoImage(name) {
+    api("api/find-image?q=" + encodeURIComponent(name) + "&name=" + encodeURIComponent(name))
+      .then(function (j) {
+        var list = j.results || [];
+        if (!list.length) { toast("补好了，图没找到，手动传一张"); return; }
+        var tryNext = function (i) {
+          if (i >= list.length || i >= 4) { toast("补好了，图没找到，手动传一张"); return; }
+          api("api/fetch-image", { method: "POST", body: { url: list[i].url, name: name } })
+            .then(function (r) {
+              if (!r.path) return tryNext(i + 1);
+              $("#fImg").value = r.path;
+              preview();
+              toast("补好了，图也找好了，点保存上架");
+            })
+            .catch(function () { tryNext(i + 1); });
+        };
+        tryNext(0);
+      })
+      .catch(function () { toast("补好了，图没找到，手动传一张"); });
+  }
 
   function openEditor(d) {
     EDITING = d || null;

@@ -37,11 +37,30 @@ if (Test-Path (Join-Path $AppDir "data.json")) {
   Copy-Item (Join-Path $AppDir "data.json") $saved
   Write-Host "keep existing data.json"
 }
-if (Test-Path $AppDir) { Remove-Item $AppDir -Recurse -Force }
+# 先停掉正在跑的服务，否则目录被占用删不掉
+try { Stop-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue } catch { }
+Get-CimInstance Win32_Process -Filter "Name='python.exe'" -ErrorAction SilentlyContinue |
+  Where-Object { $_.CommandLine -like "*server.py*" } |
+  ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+Start-Sleep -Seconds 2
+
+$removed = $false
+if (Test-Path $AppDir) {
+  for ($i = 0; $i -lt 5; $i++) {
+    try { Remove-Item $AppDir -Recurse -Force -ErrorAction Stop; $removed = $true; break }
+    catch { Write-Host "  dir busy, retry $($i+1)/5"; Start-Sleep -Seconds 2 }
+  }
+}
 $tmp = Join-Path $env:TEMP ("xj-" + [guid]::NewGuid().ToString("N"))
 Expand-Archive -Path $zip -DestinationPath $tmp -Force
 $inner = Get-ChildItem $tmp | Select-Object -First 1
-Move-Item $inner.FullName $AppDir
+if ($removed -or -not (Test-Path $AppDir)) {
+  Move-Item $inner.FullName $AppDir
+} else {
+  Write-Host "overwrite in place (dir still busy)"
+  Copy-Item (Join-Path $inner.FullName "*") $AppDir -Recurse -Force
+  Remove-Item $inner.FullName -Recurse -Force -ErrorAction SilentlyContinue
+}
 Remove-Item $tmp, $zip -Recurse -Force -ErrorAction SilentlyContinue
 if ($saved -and (Test-Path $saved)) {
   Copy-Item $saved (Join-Path $AppDir "data.json") -Force

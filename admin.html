@@ -75,6 +75,12 @@ textarea{resize:vertical;line-height:1.65}
 .order .who{color:var(--accent-2);font-size:13px;margin-left:8px}
 .order .ops{margin-top:8px;display:flex;gap:8px}
 .empty{color:var(--dim);text-align:center;padding:36px 0;font-size:14px}
+.tagchip{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:999px;
+  border:1px solid var(--line);background:#fff;font-size:13px;cursor:pointer;color:var(--dim)}
+.tagchip input{width:auto;margin:0}
+.tagchip.small{padding:4px 10px;font-size:12px;margin-right:6px}
+.tagchip.on{border-color:var(--accent);background:var(--soft);color:var(--accent-2)}
+.rowtags{margin-top:8px;display:flex;gap:0}
 .hint{color:var(--dim);font-size:12px;line-height:1.8;margin-top:10px}
 .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:rgba(40,36,32,.92);
   color:#fff;padding:10px 20px;border-radius:999px;font-size:13px;opacity:0;pointer-events:none;
@@ -189,7 +195,12 @@ textarea{resize:vertical;line-height:1.65}
     <div class="row3">
       <div><label>分类</label><select id="fCat"></select></div>
       <div><label>口味</label><input id="fFlavor" type="text" placeholder="酸甜 · 下饭" /></div>
-      <div><label>角标</label><input id="fTag" type="text" placeholder="招牌 / 上菜快" /></div>
+      <div><label>标签</label>
+        <div style="display:flex;gap:8px;padding-top:4px">
+          <label class="tagchip"><input type="checkbox" id="tagZhaopai" value="招牌" /> 招牌</label>
+          <label class="tagchip"><input type="checkbox" id="tagXianding" value="限定" /> 限定</label>
+        </div>
+      </div>
     </div>
     <div class="row3">
       <div><label>耗时</label><input id="fTime" type="text" placeholder="20 分钟" /></div>
@@ -317,13 +328,30 @@ textarea{resize:vertical;line-height:1.65}
       return '<div class="card item">' +
         (d.img ? '<img src="' + esc(d.img) + '" alt="" loading="lazy" />' : '<div style="width:64px"></div>') +
         '<div class="meta"><b>' + esc(d.name) + '</b>' +
-        '<small>' + esc(catLabel(d.cat)) + ' · ' + esc(d.flavor || "") + ' · ' + esc(d.time || "") + '</small></div>' +
+        '<small>' + esc(catLabel(d.cat)) + ' · ' + esc(d.flavor || "") + ' · ' + esc(d.time || "") + '</small>' +
+        '<div class="rowtags">' + ["招牌", "限定"].map(function (t) {
+          var on = (Array.isArray(d.tags) ? d.tags : (d.tag ? [d.tag] : [])).indexOf(t) >= 0;
+          return '<button class="tagchip small' + (on ? " on" : "") + '" data-tag="' + d.id + '" data-val="' + t + '">' + t + "</button>";
+        }).join("") + '</div></div>' +
         '<div class="ops"><button class="mini" data-edit="' + esc(d.id) + '">编辑</button>' +
         '<button class="mini" data-del="' + esc(d.id) + '">删除</button></div></div>';
     }).join("");
   }
 
   $("#menuList").addEventListener("click", function (e) {
+    var chip = e.target.closest("[data-tag]");
+    if (chip) {
+      var item = ITEMS.filter(function (x) { return x.id === chip.dataset.tag; })[0];
+      if (!item) return;
+      var tags = Array.isArray(item.tags) ? item.tags.slice() : (item.tag ? [item.tag] : []);
+      var v = chip.dataset.val;
+      var i = tags.indexOf(v);
+      if (i >= 0) tags.splice(i, 1); else tags.push(v);
+      item.tags = tags;
+      delete item.tag;
+      api("api/items", { method: "POST", body: { item: item } }).then(loadAll);
+      return;
+    }
     var ed = e.target.closest("[data-edit]");
     if (ed) return openEditor(ITEMS.filter(function (x) { return x.id === ed.dataset.edit; })[0]);
     var del = e.target.closest("[data-del]");
@@ -345,7 +373,7 @@ textarea{resize:vertical;line-height:1.65}
   function fillForm(v) {
     if (!v) return;
     var map = { fEn: "en", fFlavor: "flavor", fTime: "time", fLevel: "level", fServe: "serve",
-                fIntro: "intro", fTips: "tips", fTag: "tag" };
+                fTips: "tips" };
     Object.keys(map).forEach(function (id) {
       if (v[map[id]] != null) $("#" + id).value = v[map[id]];
     });
@@ -379,7 +407,10 @@ textarea{resize:vertical;line-height:1.65}
     $("#fName").value = d ? d.name || "" : "";
     $("#fEn").value = d ? d.en || "" : "";
     $("#fFlavor").value = d ? d.flavor || "" : "";
-    $("#fTag").value = d ? d.tag || "" : "";
+    var tg = d ? (Array.isArray(d.tags) ? d.tags : (d.tag ? [d.tag] : [])) : [];
+    $("#tagZhaopai").checked = tg.indexOf("招牌") >= 0;
+    $("#tagXianding").checked = tg.indexOf("限定") >= 0;
+    $("#fIntro").value = "";
     $("#fTime").value = d ? d.time || "" : "";
     $("#fLevel").value = d ? d.level || "" : "";
     $("#fServe").value = d ? d.serve || "" : "";
@@ -468,7 +499,7 @@ textarea{resize:vertical;line-height:1.65}
       en: $("#fEn").value.trim(),
       cat: $("#fCat").value,
       flavor: $("#fFlavor").value.trim(),
-      tag: $("#fTag").value.trim(),
+      tags: ["招牌", "限定"].filter(function (t) { return $("#tag" + (t === "招牌" ? "Zhaopai" : "Xianding")).checked; }),
       time: $("#fTime").value.trim(),
       level: $("#fLevel").value.trim(),
       serve: $("#fServe").value.trim(),

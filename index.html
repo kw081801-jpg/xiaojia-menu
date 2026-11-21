@@ -1187,6 +1187,11 @@ textarea.wish-input{resize:vertical;line-height:1.7}
 
   function itemId(d) { return String(d.id || d.slug || d.name); }
 
+  function tagsOf(d) {
+    if (Array.isArray(d.tags)) return d.tags.filter(Boolean);
+    return d.tag ? [d.tag] : [];
+  }
+
   var state = {
     view: "all",
     query: "",
@@ -1504,7 +1509,7 @@ textarea.wish-input{resize:vertical;line-height:1.7}
     el.innerHTML =
       '<div class="card-media' + (d.img ? "" : " no-img") + '">' +
         (d.img ? imageTag(d) : '<span aria-hidden="true">' + esc(String(d.name || "菜").charAt(0)) + "</span>") +
-        (d.tag ? '<span class="card-badge">' + esc(d.tag) + "</span>" : "") +
+        (tagsOf(d).length ? '<span class="card-badge">' + esc(tagsOf(d)[0]) + "</span>" : "") +
       "</div>" +
       '<div class="card-body">' +
         '<div class="card-top">' +
@@ -1577,7 +1582,9 @@ textarea.wish-input{resize:vertical;line-height:1.7}
     if (d.time) tags.push('<span class="badge">耗时 · ' + esc(d.time) + "</span>");
 
     if (d.serve) tags.push('<span class="badge">份量 · ' + esc(d.serve) + "</span>");
-    if (d.tag) tags.push('<span class="badge tag">' + esc(d.tag) + "</span>");
+    tagsOf(d).forEach(function (t) {
+      tags.push('<span class="badge tag">' + esc(t) + "</span>");
+    });
 
     var body =
       (d.img
@@ -1591,7 +1598,6 @@ textarea.wish-input{resize:vertical;line-height:1.7}
             '<p class="detail-en">' + esc(d.en || "—") + "</p>" +
           "</div>" +
         "</div>" +
-        (d.intro ? '<p class="detail-intro">' + esc(d.intro) + "</p>" : "") +
         (tags.length ? '<div class="detail-tags">' + tags.join("") + "</div>" : "") +
         (state.online
           ? '<button class="btn-order" data-order="' + esc(itemId(d)) + '">＋ 加入今晚菜单</button>'
@@ -1651,7 +1657,7 @@ textarea.wish-input{resize:vertical;line-height:1.7}
           '<div class="tarot-front-body">' +
             '<div class="tarot-front-meta">' +
               '<span class="tarot-base">' + esc(cat ? cat.label : "一道菜") + "</span>" +
-              (d.tag ? '<span class="tarot-tag soft">' + esc(d.tag) + "</span>" : "") +
+              (tagsOf(d).length ? '<span class="tarot-tag soft">' + esc(tagsOf(d)[0]) + "</span>" : "") +
             "</div>" +
             '<h3 class="tarot-name">' + esc(d.name) + "</h3>" +
             '<p class="tarot-en">' + esc(d.en || "—") + "</p>" +

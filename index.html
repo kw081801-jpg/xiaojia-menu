@@ -13,10 +13,10 @@
       if (t) document.documentElement.setAttribute("data-theme", t);
     } catch (e) {}
   </script>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Noto+Sans+SC:wght@300;400;500&family=Noto+Serif+SC:wght@400;500;600&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet" />
   <style>
+@font-face{font-family:'Cormorant Garamond';font-style:normal;font-weight:300 700;font-display:swap;src:url('fonts/cormorant-var.woff2') format('woff2')}
+@font-face{font-family:'Cormorant Garamond';font-style:italic;font-weight:300 700;font-display:swap;src:url('fonts/cormorant-var-italic.woff2') format('woff2')}
+@font-face{font-family:'ZCOOL KuaiLe';font-style:normal;font-weight:400;font-display:swap;src:url('fonts/zcool-subset.woff2') format('woff2')}
 /* =========================================================
    主题变量：夜宴（默认）
    ========================================================= */
@@ -48,8 +48,8 @@
   --cover-fallback:#05040a;
   --page-glow:rgba(201,169,106,.09);
   --radius:14px;
-  --serif:"Cormorant Garamond","Noto Serif SC","Songti SC",Georgia,"Times New Roman",serif;
-  --sans:"Noto Sans SC","PingFang SC","Microsoft YaHei",-apple-system,system-ui,sans-serif;
+  --serif:"Cormorant Garamond","Songti SC","STSong","Source Han Serif SC","Noto Serif CJK SC","Noto Serif SC",Georgia,"Times New Roman",serif;
+  --sans:"PingFang SC","HarmonyOS Sans SC","MiSans","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei",-apple-system,system-ui,sans-serif;
 }
 
 /* 米纸：暖白纸感 */
@@ -203,7 +203,9 @@
 
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;padding:0}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 body{
+  -webkit-tap-highlight-color:transparent;
   background:
     radial-gradient(900px 480px at 85% -8%, var(--page-glow), transparent 60%),
     radial-gradient(700px 420px at 0% 100%, var(--accent-softer), transparent 65%),
@@ -599,7 +601,7 @@ body{
 [data-theme="sumikko"] .rand-title,
 [data-theme="sumikko"] .detail-name,
 [data-theme="sumikko"] .cover-sub,
-[data-theme="sumikko"] .cover-enter{font-family:"ZCOOL KuaiLe","Noto Serif SC",var(--serif);letter-spacing:.03em}
+[data-theme="sumikko"] .cover-enter{font-family:"ZCOOL KuaiLe",var(--serif);letter-spacing:.06em}
 [data-theme="sumikko"] .brand-text h1{color:#4b4139}
 [data-theme="sumikko"] .subtitle{color:var(--accent-2);opacity:.9}
 [data-theme="sumikko"] .icon-btn{background-color:#fffdf9;border-color:var(--line);color:var(--accent-2);
@@ -815,6 +817,9 @@ body{
   .cover-bg{animation:none}
   .cover-inner,.cover-eyebrow,.cover-divider,.cover-sub,.cover-enter{animation:none}
   .card:hover .card-media img{transform:none}
+}
+@media (max-width:640px){
+  .cover-bg{background-image:url("images/sm/cover.webp");background-size:cover}
 }
   </style>
 </head>
@@ -1251,9 +1256,13 @@ body{
     countEl.textContent = "共 " + shown + " 道" + (q ? "（搜索「" + state.query.trim() + "」）" : "");
   }
 
-  function imageTag(d, cls) {
+  function imageTag(d, cls, sizes) {
     if (d.img) {
-      return '<img class="' + (cls || "") + '" src="' + esc(d.img) + '" alt="' + esc(d.name) + '" loading="lazy" decoding="async" />';
+      var small = d.img.replace(/^images\//, "images/sm/");
+      return '<img class="' + (cls || "") + '" src="' + esc(d.img) + '"' +
+        ' srcset="' + esc(small) + ' 560w, ' + esc(d.img) + ' 900w"' +
+        ' sizes="' + (sizes || "(max-width:600px) 92vw, (max-width:1000px) 46vw, 340px") + '"' +
+        ' alt="' + esc(d.name) + '" loading="lazy" decoding="async" />';
     }
     return "";
   }
@@ -1347,7 +1356,7 @@ body{
 
     var body =
       (d.img
-        ? '<div class="detail-cover">' + imageTag(d) + "</div>"
+        ? '<div class="detail-cover">' + imageTag(d, "", "(max-width:640px) 94vw, 560px") + "</div>"
         : '<div class="detail-cover no-img"><span aria-hidden="true">' + esc(String(d.name).charAt(0)) + "</span></div>") +
       '<div class="detail-inner">' +
         '<div class="detail-head">' +
@@ -1409,7 +1418,7 @@ body{
           "</div>" +
         "</div>" +
         '<div class="tarot-face tarot-front">' +
-          '<div class="tarot-art">' + imageTag(d) + "</div>" +
+          '<div class="tarot-art">' + imageTag(d, "", "(max-width:640px) 70vw, 300px") + "</div>" +
           '<div class="tarot-front-body">' +
             '<div class="tarot-front-meta">' +
               '<span class="tarot-base">' + esc(cat ? cat.label : "一道菜") + "</span>" +

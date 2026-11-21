@@ -996,7 +996,7 @@ textarea.wish-input{resize:vertical;line-height:1.7}
             <input id="coverDate" type="date" />
           </label>
           <label class="cover-field">
-            <span>客人</span>
+            <span>昵称</span>
             <input id="coverName" type="text" maxlength="20" placeholder="神秘来客" />
           </label>
         </div>
@@ -1922,13 +1922,15 @@ textarea.wish-input{resize:vertical;line-height:1.7}
 
     function refreshAsk() {
       if (!askEl) return;
-      askEl.textContent = "「" + dateLabel(dateEl.value) + "」的客人是？";
+      var who = ((nameEl && nameEl.value) || "").trim() || "客人";
+      askEl.textContent = "「" + dateLabel(dateEl.value) + "」的" + who + "是？";
     }
     if (dateEl) {
       dateEl.value = (state.guest && state.guest.date) || todayStr();
       nameEl.value = (state.guest && state.guest.name) || "神秘来客";
       refreshAsk();
       dateEl.addEventListener("change", refreshAsk);
+      nameEl.addEventListener("input", refreshAsk);
     }
 
     function enter() {

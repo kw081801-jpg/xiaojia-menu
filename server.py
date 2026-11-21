@@ -76,8 +76,15 @@ def slug(text):
 
 # ---------------------------------------------------------------- 找图
 
-def _get(url, timeout=20, limit=8 * 1024 * 1024):
-    req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "application/json,image/*"})
+def _get(url, timeout=20, limit=8 * 1024 * 1024, headers=None):
+    h = {
+        "User-Agent": UA_BROWSER,
+        "Accept": "application/json, text/html, image/*;q=0.8",
+        "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.6",
+    }
+    if headers:
+        h.update(headers)
+    req = urllib.request.Request(url, headers=h)
     with urllib.request.urlopen(req, timeout=timeout) as r:
         return r.read(limit), r.headers.get("Content-Type", "")
 
@@ -115,6 +122,43 @@ def search_wikimedia(q):
     return out
 
 
+
+def search_baidu(q):
+    """百度图片：国内直连、无需 key，中文菜名命中率最高。"""
+    u = ("https://image.baidu.com/search/acjson?tn=resultjson_com&ipn=rj&ct=201326592&is=&fp=result"
+         "&cl=2&lm=-1&ie=utf-8&oe=utf-8&st=-1&word=%s&pn=0&rn=20" % urllib.parse.quote(q))
+    raw, _ = _get(u, timeout=10, headers={
+        "Referer": "https://image.baidu.com/search/index?tn=baiduimage&word=x",
+        "Accept": "application/json",
+        "X-Requested-With": "XMLHttpRequest",
+    })
+    d = json.loads(raw.decode("utf-8", "ignore"))
+    out = []
+    for it in d.get("data", []):
+        if not isinstance(it, dict):
+            continue
+        url = it.get("middleURL") or it.get("hoverURL") or it.get("thumbURL")
+        if url and url.startswith("http"):
+            out.append({
+                "url": url, "thumb": it.get("thumbURL") or url,
+                "title": (it.get("fromPageTitleEnc") or "")[:60],
+                "source": "百度", "license": "",
+            })
+    return out
+
+
+def search_bing(q):
+    """Bing 中国站图片搜索，不需要 key。"""
+    u = "https://cn.bing.com/images/async?q=%s&first=1&count=35&mkt=zh-CN&loadasync=1" % urllib.parse.quote(q)
+    raw, _ = _get(u, timeout=10)
+    html = raw.decode("utf-8", "ignore").replace("&quot;", '"').replace("&amp;", "&")
+    urls = re.findall(r'"murl":"(https?://[^"]+)"', html)
+    out = []
+    for x in urls:
+        out.append({"url": x, "thumb": x, "title": "", "source": "Bing", "license": ""})
+    return out
+
+
 def search_wikipedia(name, lang="zh"):
     """维基条目首图往往就是这道菜本身，命中最准。"""
     if not name:
@@ -149,9 +193,16 @@ def find_images(q, name=""):
     if hit and time.time() - hit[0] < 3600:
         return hit[1]
     results = []
-    plan = ([search_pexels] if PEXELS_KEY else []) + [search_openverse, search_wikimedia]
+    # 国内服务器优先走百度和 Bing 中国站，海外源只在有网时兜底
+    plan = []
+    if PEXELS_KEY:
+        plan.append(search_pexels)
+    if q:
+        plan.append(search_baidu)
+        plan.append(search_bing)
     if name:
-        plan.insert(0, lambda _q, n=name: search_wikipedia(n, "zh"))
+        plan.append(lambda _q, n=name: search_wikipedia(n, "zh"))
+    plan += [search_openverse, search_wikimedia]
     if q:
         plan.append(lambda _q: search_wikipedia(_q, "en"))
     for fn in plan:
@@ -172,20 +223,28 @@ def find_images(q, name=""):
 
 
 def download_image(url, name):
+    parts = urllib.parse.urlsplit(url)
+    ref = "%s://%s/" % (parts.scheme, parts.netloc)
+    if "baidu.com" in url:
+        ref = "https://image.baidu.com/"
+    elif "bing.com" in url or "bing.net" in url:
+        ref = "https://cn.bing.com/"
     req = urllib.request.Request(url, headers={
         "User-Agent": UA_BROWSER,
-        "Referer": "https://commons.wikimedia.org/",
+        "Referer": ref,
         "Accept": "image/avif,image/webp,image/*,*/*;q=0.8",
     })
+    def _fetch(u, referer):
+        h = {"User-Agent": UA_BROWSER, "Accept": "image/avif,image/webp,image/*,*/*;q=0.8"}
+        if referer:
+            h["Referer"] = referer
+        with urllib.request.urlopen(urllib.request.Request(u, headers=h), timeout=25) as r:
+            return r.headers.get("Content-Type", ""), r.read(8 * 1024 * 1024)
+
     try:
-        with urllib.request.urlopen(req, timeout=25) as r:
-            ctype = r.headers.get("Content-Type", "")
-            data = r.read(8 * 1024 * 1024)
+        ctype, data = _fetch(url, ref)
     except Exception:
-        time.sleep(1)
-        with urllib.request.urlopen(req, timeout=25) as r:
-            ctype = r.headers.get("Content-Type", "")
-            data = r.read(8 * 1024 * 1024)
+        ctype, data = _fetch(url, None)
     if not ctype.startswith("image/"):
         raise ValueError("不是图片：" + ctype)
     ext = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp",
@@ -276,7 +335,9 @@ class H(BaseHTTPRequestHandler):
             if not u.startswith(("http://", "https://")):
                 return self.json({"error": "bad"}, 400)
             try:
-                req = urllib.request.Request(u, headers={"User-Agent": UA_BROWSER, "Referer": "https://commons.wikimedia.org/"})
+                ref = "https://image.baidu.com/" if "baidu.com" in u else (
+                    "https://cn.bing.com/" if ("bing.com" in u or "bing.net" in u) else "https://commons.wikimedia.org/")
+                req = urllib.request.Request(u, headers={"User-Agent": UA_BROWSER, "Referer": ref})
                 with urllib.request.urlopen(req, timeout=20) as r:
                     body = r.read(4 * 1024 * 1024)
                     ctype = r.headers.get("Content-Type", "image/jpeg")

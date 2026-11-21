@@ -23,10 +23,10 @@
 window.MENU_SETTINGS = {
   brand: "小家",
   title: "小家菜单",
-  subtitle: "一屋两人 · 三餐四季",
-  eyebrow: "HOME KITCHEN · DAILY MENU",
-  coverSub: "今天想吃点什么？",
-  enterLabel: "看看菜单 →",
+  subtitle: "一屋两人 · 三餐四季 · 朋友来了先点菜",
+  eyebrow: "HOME KITCHEN · 预点菜",
+  coverSub: "来做客，先点菜",
+  enterLabel: "开始点菜 →",
 
   tabs: [
     { key: "all", label: "全部", en: "All" },

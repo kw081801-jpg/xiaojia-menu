@@ -239,7 +239,7 @@ def llm_conf():
     key = conf.get("key") or env_key
     base = (conf.get("base") or ("https://api.deepseek.com" if os.environ.get("DEEPSEEK_API_KEY")
                                  else "https://api.openai.com/v1")).rstrip("/")
-    model = conf.get("model") or ("deepseek-chat" if os.environ.get("DEEPSEEK_API_KEY") else "gpt-4o-mini")
+    model = conf.get("model") or ("deepseek-flash" if os.environ.get("DEEPSEEK_API_KEY") else "gpt-4o-mini")
     return key, base, model
 
 
@@ -276,16 +276,22 @@ def call_llm(name):
     return out
 
 
+LAST_LLM_ERR = ""
+
+
 def autofill(name):
     """先大模型（自动分类/口味/介绍），失败或没配 key 时退回内置菜谱库。"""
+    global LAST_LLM_ERR
     name = name.strip()
     if not name:
         return None
     try:
         out = call_llm(name)
         if out:
+            LAST_LLM_ERR = ""
             return out
     except Exception as e:
+        LAST_LLM_ERR = str(e)[:200]
         sys.stderr.write("llm error: %s\n" % e)
     lib = load_recipes()
     if name in lib:
@@ -444,7 +450,8 @@ class H(BaseHTTPRequestHandler):
                 return
             name = (qs.get("name") or [""])[0].strip()
             item = autofill(name)
-            return self.json({"found": bool(item), "item": item or {}})
+            return self.json({"found": bool(item), "item": item or {},
+                              "error": "" if item else LAST_LLM_ERR})
         if p.path == "/api/wishes":
             if not self.need_admin():
                 return

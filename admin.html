@@ -173,10 +173,10 @@ textarea{resize:vertical;line-height:1.65}
 
       <div class="card">
         <h3 style="font-size:17px;margin-bottom:6px">大模型（自动补全用）</h3>
-        <p class="hint" style="margin:0 0 10px">填 OpenAI 兼容接口即可。DeepSeek 地址 https://api.deepseek.com ，模型 deepseek-chat</p>
+        <p class="hint" style="margin:0 0 10px">填 OpenAI 兼容接口即可。DeepSeek 地址 https://api.deepseek.com ，模型 deepseek-flash</p>
         <div class="row">
           <div><label>接口地址</label><input id="llmBase" type="text" placeholder="https://api.deepseek.com" /></div>
-          <div><label>模型</label><input id="llmModel" type="text" placeholder="deepseek-chat" /></div>
+          <div><label>模型</label><input id="llmModel" type="text" placeholder="deepseek-flash" /></div>
         </div>
         <label>API Key</label>
         <input id="llmKey" type="password" placeholder="留空表示不修改" autocomplete="new-password" />
@@ -405,7 +405,7 @@ textarea{resize:vertical;line-height:1.65}
     api("api/autofill?name=" + encodeURIComponent(name)).then(function (j) {
       btn.disabled = false;
       btn.textContent = "✨ 自动补全";
-      if (!j.found) { toast("字库里没有这道，填几项我记下来也行"); return; }
+      if (!j.found) { toast(j.error ? ("大模型返回：" + j.error) : "字库里没有这道，填几项我记下来也行"); return; }
       fillForm(j.item);
       autoImage(name);
       toast("补好了，正在找图…");

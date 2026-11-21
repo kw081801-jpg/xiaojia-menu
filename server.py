@@ -237,9 +237,8 @@ def llm_conf():
         d = load()
     conf = d.get("llm") or {}
     key = conf.get("key") or env_key
-    base = (conf.get("base") or ("https://api.deepseek.com" if os.environ.get("DEEPSEEK_API_KEY")
-                                 else "https://api.openai.com/v1")).rstrip("/")
-    model = conf.get("model") or ("deepseek-flash" if os.environ.get("DEEPSEEK_API_KEY") else "gpt-4o-mini")
+    base = (conf.get("base") or "https://api.deepseek.com").rstrip("/")
+    model = conf.get("model") or "deepseek-flash"
     return key, base, model
 
 
@@ -579,6 +578,11 @@ class H(BaseHTTPRequestHandler):
                 if conf.get("key") == "__keep__":
                     conf.pop("key", None)
                 cur.update({k: v for k, v in conf.items() if k in ("key", "base", "model")})
+                # 只填了 key 的时候，自动补上 DeepSeek 的地址和模型
+                if cur.get("key") and not cur.get("base"):
+                    cur["base"] = "https://api.deepseek.com"
+                if cur.get("key") and not cur.get("model"):
+                    cur["model"] = "deepseek-flash"
                 d["llm"] = cur
                 save(d)
             return self.json({"ok": True})

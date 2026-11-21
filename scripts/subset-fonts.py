@@ -23,8 +23,10 @@ EXTRA = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz .,:;!?()
 
 def collect():
     text = ""
-    for name in ("index.html", "menu-data.js"):
-        text += io.open(os.path.join(ROOT, name), encoding="utf-8").read()
+    for name in ("index.html", "menu-data.js", "font-extra.txt"):
+        path = os.path.join(ROOT, name)
+        if os.path.exists(path):
+            text += io.open(path, encoding="utf-8").read()
     cjk = {c for c in text if "\u4e00" <= c <= "\u9fff"}
     return "".join(sorted(cjk)) + PUNCT + EXTRA
 

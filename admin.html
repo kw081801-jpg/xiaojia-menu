@@ -118,6 +118,7 @@ textarea{resize:vertical;line-height:1.65}
     <div class="tabs">
       <button class="tab on" data-tab="menu">菜谱</button>
       <button class="tab" data-tab="orders">订单 <span id="badgeNew"></span></button>
+      <button class="tab" data-tab="wishes">许愿 <span id="badgeWish"></span></button>
       <button class="tab" data-tab="settings">页面设置</button>
     </div>
 
@@ -136,6 +137,14 @@ textarea{resize:vertical;line-height:1.65}
         <button id="refreshOrders" class="mini">刷新</button>
       </div>
       <div id="orderList"></div>
+    </section>
+
+    <section class="panel" id="panel-wishes">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <span class="hint" style="margin:0">朋友们在「许愿」里提的菜，做得出来就加进菜单</span>
+        <button id="refreshWishes" class="mini">刷新</button>
+      </div>
+      <div id="wishList"></div>
     </section>
 
     <section class="panel" id="panel-settings">
@@ -274,6 +283,7 @@ textarea{resize:vertical;line-height:1.65}
       document.querySelectorAll(".panel").forEach(function (p) { p.classList.remove("on"); });
       $("#panel-" + b.dataset.tab).classList.add("on");
       if (b.dataset.tab === "orders") loadOrders();
+      if (b.dataset.tab === "wishes") loadWishes();
     });
   });
 
@@ -462,6 +472,26 @@ textarea{resize:vertical;line-height:1.65}
     SETTINGS.enterLabel = $("#sEnter").value;
     SETTINGS.brand = $("#sBrand").value;
     api("api/settings", { method: "POST", body: { settings: SETTINGS } }).then(function () { toast("存好了"); });
+  });
+
+  function loadWishes() {
+    api("api/wishes").then(function (j) {
+      var list = j.wishes || [];
+      $("#badgeWish").textContent = list.length ? "(" + list.length + ")" : "";
+      $("#wishList").innerHTML = list.length ? list.map(function (w) {
+        return '<div class="card order new">' +
+          '<h3>' + esc(w.dish) + (w.who ? '<span class="who">' + esc(w.who) + " 想吃</span>" : "") + "</h3>" +
+          '<p>' + esc(w.created) + (w.note ? " · " + esc(w.note) : "") + "</p>" +
+          '<div class="ops"><button class="mini" data-wdel="' + w.id + '">删掉</button></div></div>';
+      }).join("") : '<div class="card empty">还没有人许愿</div>';
+    });
+  }
+  $("#refreshWishes").addEventListener("click", loadWishes);
+  $("#wishList").addEventListener("click", function (e) {
+    var b = e.target.closest("[data-wdel]");
+    if (b && confirm("删掉这条许愿？")) {
+      api("api/wishes/" + b.dataset.wdel, { method: "DELETE" }).then(loadWishes);
+    }
   });
 
   function loadOrders() {

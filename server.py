@@ -54,12 +54,13 @@ def normalize_settings(st):
 
 def load():
     if not os.path.exists(DATA):
-        return {"settings": {}, "items": [], "orders": []}
+        return {"settings": {}, "items": [], "orders": [], "wishes": []}
     with open(DATA, encoding="utf-8") as f:
         d = json.load(f)
     d.setdefault("settings", {})
     d.setdefault("items", [])
     d.setdefault("orders", [])
+    d.setdefault("wishes", [])
     return d
 
 
@@ -324,6 +325,12 @@ class H(BaseHTTPRequestHandler):
             return self.json({"settings": normalize_settings(d["settings"]), "items": d["items"]})
         if p.path == "/api/session":
             return self.json({"ok": self.admin()})
+        if p.path == "/api/wishes":
+            if not self.need_admin():
+                return
+            with LOCK:
+                d = load()
+            return self.json({"wishes": list(reversed(d["wishes"]))})
         if p.path == "/api/orders":
             if not self.need_admin():
                 return
@@ -401,6 +408,22 @@ class H(BaseHTTPRequestHandler):
                 })
                 save(d)
                 return self.json({"ok": True, "id": d["orders"][-1]["id"]})
+        if p == "/api/wishes":
+            dish = str(b.get("dish", "")).strip()[:60]
+            if not dish:
+                return self.json({"error": "先写个菜名"}, 400)
+            with LOCK:
+                d = load()
+                d["wishes"].append({
+                    "id": (d["wishes"][-1]["id"] + 1) if d["wishes"] else 1,
+                    "created": time.strftime("%Y-%m-%d %H:%M"),
+                    "dish": dish,
+                    "note": str(b.get("note", ""))[:300],
+                    "who": str(b.get("who", ""))[:40],
+                    "status": "new",
+                })
+                save(d)
+            return self.json({"ok": True})
         if p == "/api/items":
             if not self.need_admin():
                 return
@@ -472,6 +495,15 @@ class H(BaseHTTPRequestHandler):
             with LOCK:
                 d = load()
                 d["items"] = [i for i in d["items"] if i.get("id") != iid]
+                save(d)
+            return self.json({"ok": True})
+        if p.startswith("/api/wishes/"):
+            if not self.need_admin():
+                return
+            wid = p.rsplit("/", 1)[-1]
+            with LOCK:
+                d = load()
+                d["wishes"] = [w for w in d["wishes"] if str(w.get("id")) != wid]
                 save(d)
             return self.json({"ok": True})
         if p.startswith("/api/orders/"):

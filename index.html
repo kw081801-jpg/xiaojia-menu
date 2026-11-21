@@ -871,6 +871,23 @@ body{
   .cat-glyph{width:26px;height:26px}
 }
 
+/* ---------- 两个标签 + 许愿 ---------- */
+.tabs{justify-content:center}
+.tab{flex:0 0 auto;padding-left:30px;padding-right:30px}
+.tab-wish{font-style:normal}
+.wish{max-width:520px;margin:20px auto 0;padding:0 4px 40px}
+.wish-title{font-family:var(--serif);font-size:32px;margin:0 0 10px;color:var(--accent-2);letter-spacing:.04em}
+.wish-sub{color:var(--ink-dim);font-size:14px;line-height:1.9;margin:0 0 22px}
+.wish-label{display:block;font-size:12px;letter-spacing:.14em;color:var(--ink-dim);margin:16px 0 7px}
+.wish-input{width:100%;box-sizing:border-box;padding:12px 15px;border-radius:14px;border:1px solid var(--line);
+  background-color:var(--accent-softer);color:var(--ink);font:inherit;font-size:15px;outline:none}
+.wish-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+textarea.wish-input{resize:vertical;line-height:1.7}
+.wish-btn{width:100%;margin-top:24px;padding:14px;border-radius:14px;border:1.5px dashed var(--accent);
+  background-color:var(--accent-soft);color:var(--ink);font:inherit;font-size:16px;cursor:pointer;letter-spacing:.08em}
+.wish-btn:hover{background-color:var(--accent);color:var(--chip-ink)}
+.wish-hint{min-height:22px;margin:14px 0 0;font-size:13px;color:var(--accent-2);text-align:center}
+
 @media (prefers-reduced-motion:reduce){
   .cover-bg{animation:none}
   .cover-inner,.cover-eyebrow,.cover-divider,.cover-sub,.cover-enter{animation:none}
@@ -1212,32 +1229,79 @@ body{
   // ---------- Tab ----------
   function buildTabs() {
     var tabs = $("#tabs");
-    var html = "";
-    (S.tabs || []).forEach(function (t) {
-      html += '<button class="tab' + (t.key === state.view ? " active" : "") +
-        '" data-view="' + esc(t.key) + '">' + esc(t.label) + "</button>";
-    });
-    html += '<button class="tab tab-random' + (state.view === "__random__" ? " active" : "") +
-      '" data-view="__random__">Surprise</button>';
-    tabs.innerHTML = html;
-    tabs.addEventListener("click", function (e) {
-      var btn = e.target.closest(".tab");
-      if (!btn) return;
-      state.view = btn.dataset.view;
-      tabs.querySelectorAll(".tab").forEach(function (b) {
-        b.classList.toggle("active", b === btn);
-      });
-      SFX.click();
-      render();
-    });
+    tabs.innerHTML =
+      '<button class="tab' + (state.view === "all" ? " active" : "") + '" data-view="all">点餐</button>' +
+      '<button class="tab tab-wish' + (state.view === "__wish__" ? " active" : "") +
+      '" data-view="__wish__">许愿</button>';
   }
 
-  // ---------- 数据筛选 ----------
-  function haystack(d) {
-    return [d.name, d.en, d.flavor, d.intro, d.cat, d.level, d.tag]
-      .concat(d.ingredients || []).join(" ").toLowerCase();
+  $("#tabs").addEventListener("click", function (e) {
+    var btn = e.target.closest(".tab");
+    if (!btn) return;
+    SFX.click();
+    state.view = btn.dataset.view;
+    state.query = "";
+    var sEl = $("#search");
+    if (sEl) sEl.value = "";
+    buildTabs();
+    render();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+
+  // ---------- 许愿 ----------
+  function renderWish() {
+    clearCatNav();
+    if (countEl) countEl.textContent = "";
+    content.innerHTML =
+      '<section class="wish">' +
+        '<h1 class="wish-title">许个愿</h1>' +
+        '<p class="wish-sub">菜单里没有、但你现在特别想吃的，写下来。<br>大厨看到就会安排。</p>' +
+        '<label class="wish-label">想吃的菜</label>' +
+        '<input id="wishDish" class="wish-input" maxlength="40" placeholder="比如：水煮鱼、芋泥蛋糕" />' +
+        '<label class="wish-label">要求或理由（可不填）</label>' +
+        '<textarea id="wishNote" class="wish-input" rows="3" maxlength="200" placeholder="少辣 / 想吃甜口的 / 上次那家太贵了"></textarea>' +
+        '<label class="wish-label">你是谁（可不填）</label>' +
+        '<input id="wishWho" class="wish-input" maxlength="20" placeholder="阿明" />' +
+        '<button id="wishSubmit" class="wish-btn">交给大厨</button>' +
+        '<p class="wish-hint" id="wishHint"></p>' +
+      "</section>";
   }
-  function matches(d, q) {
+
+  document.addEventListener("click", function (e) {
+    if (!e.target.closest("#wishSubmit")) return;
+    var dish = ($("#wishDish").value || "").trim();
+    var hint = $("#wishHint");
+    if (!dish) {
+      hint.textContent = "先写个菜名";
+      return;
+    }
+    var btn = $("#wishSubmit");
+    btn.disabled = true;
+    btn.textContent = "提交中…";
+    fetch("api/wishes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        dish: dish,
+        note: ($("#wishNote").value || "").trim(),
+        who: ($("#wishWho").value || "").trim()
+      })
+    }).then(function (r) {
+      if (!r.ok) throw new Error("bad");
+      return r.json();
+    }).then(function () {
+      btn.disabled = false;
+      btn.textContent = "交给大厨";
+      $("#wishDish").value = "";
+      $("#wishNote").value = "";
+      hint.textContent = "收到，我去研究一下能不能做。";
+    }).catch(function () {
+      btn.disabled = false;
+      btn.textContent = "没提交上，再试一次";
+    });
+  });
+
+    function matches(d, q) {
     return !q || haystack(d).indexOf(q.toLowerCase()) !== -1;
   }
 
@@ -1253,6 +1317,7 @@ body{
 
   // ---------- 渲染 ----------
   function render() {
+    if (state.view === "__wish__") { renderWish(); return; }
     if (state.view === "__random__") { clearCatNav(); renderRandom(); return; }
 
     var q = state.query.trim();

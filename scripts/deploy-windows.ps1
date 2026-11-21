@@ -58,37 +58,22 @@ if (Test-Path (Join-Path $AppDir "data.json")) {
   Copy-Item (Join-Path $AppDir "data.json") $saved
   Write-Host "keep existing data.json"
 }
-# 先停掉正在跑的服务，否则目录被占用删不掉
+# 停掉正在跑的服务，避免文件被占用（数据在 data.json，不会被覆盖）
 try { Stop-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue } catch { }
 Get-CimInstance Win32_Process -Filter "Name='python.exe'" -ErrorAction SilentlyContinue |
   Where-Object { $_.CommandLine -like "*server.py*" } |
   ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
 Start-Sleep -Seconds 2
 
-$removed = $false
-if (Test-Path $AppDir) {
-  for ($i = 0; $i -lt 5; $i++) {
-    try { Remove-Item $AppDir -Recurse -Force -ErrorAction Stop; $removed = $true; break }
-    catch { Write-Host "  dir busy, retry $($i+1)/5"; Start-Sleep -Seconds 2 }
-  }
-}
-$tmp = Join-Path $env:TEMP ("xj-" + [guid]::NewGuid().ToString("N"))
-Expand-Archive -Path $zip -DestinationPath $tmp -Force
-$inner = Get-ChildItem $tmp | Select-Object -First 1
-if ($removed -or -not (Test-Path $AppDir)) {
-  Move-Item $inner.FullName $AppDir
-} else {
-  Write-Host "overwrite in place (dir still busy)"
-  Copy-Item (Join-Path $inner.FullName "*") $AppDir -Recurse -Force
-  Remove-Item $inner.FullName -Recurse -Force -ErrorAction SilentlyContinue
-}
-Remove-Item $tmp, $zip -Recurse -Force -ErrorAction SilentlyContinue
-if ($saved -and (Test-Path $saved)) {
-  Copy-Item $saved (Join-Path $AppDir "data.json") -Force
-  Remove-Item $saved -Force
-  Write-Host "data.json restored"
-}
-Write-Host "files -> $AppDir"
+# 解到临时目录，再覆盖到目标目录（不删除目标目录，避免“文件正由另一进程使用”）
+$staging = Join-Path $env:TEMP ("xj-" + [guid]::NewGuid().ToString("N"))
+Expand-Archive -Path $zip -DestinationPath $staging -Force
+$inner = Get-ChildItem $staging | Select-Object -First 1
+if (-not (Test-Path $AppDir)) { New-Item -ItemType Directory -Path $AppDir -Force | Out-Null }
+Copy-Item (Join-Path $inner.FullName "*") $AppDir -Recurse -Force
+Remove-Item $staging -Recurse -Force -ErrorAction SilentlyContinue
+if (-not (Test-Path (Join-Path $AppDir "index.html"))) { throw "copy failed: index.html missing in $AppDir" }
+Write-Host "files -> $AppDir (in place, data.json untouched)"
 
 Say "check python"
 function Find-Python {

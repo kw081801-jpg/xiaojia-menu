@@ -213,3 +213,49 @@ PEXELS_API_KEY=你的key python server.py
 | 饮品 | 蜥蜴 |
 
 在 `menu-data.js` 的 `categories[].icon` 里改值（角色文件名，不带 `.png`）就能换。
+
+## 部署到腾讯云轻量应用服务器
+
+服务器上执行一次：
+
+```bash
+curl -O https://raw.githubusercontent.com/kw081801-jpg/xiaojia-menu/main/scripts/deploy-tencent.sh
+sudo bash deploy-tencent.sh
+```
+
+脚本做四件事：装 python3/git → 用 ghproxy 镜像拉仓库到 `/opt/xiaojia-menu` → 写 systemd 服务并启动（默认端口 8080）→ 放行本机防火墙并自检。
+
+然后**去控制台开防火墙**：轻量应用服务器 → 实例 → 防火墙 → 添加规则，TCP 8080（换 80 就填 80），来源 `0.0.0.0/0`。轻量的防火墙是独立于系统防火墙的一层，不开外部访问不通。
+
+- 前台 `http://公网IP:8080/`
+- 管理台 `http://公网IP:8080/admin.html`
+
+想换密码/端口/目录：
+
+```bash
+sudo APP_DIR=/www/xiaojia PORT=80 XJ_ADMIN_PASSWORD='新密码' bash deploy-tencent.sh
+```
+
+更新版本：`cd /opt/xiaojia-menu && sudo git pull && sudo systemctl restart xiaojia-menu`
+
+数据在 `/opt/xiaojia-menu/data.json`，图片在 `images/uploads/`（git 忽略），备份这两个就够。
+
+### 绑域名 + HTTPS
+
+1. 域名解析 A 记录到公网 IP
+2. 大陆服务器用域名对外提供网站**需要 ICP 备案**（用 IP 直连不需要）
+3. 备案下来后装 Nginx 反代，用 certbot 签证书：
+
+```nginx
+server {
+    listen 80;
+    server_name menu.example.com;
+    client_max_body_size 10m;
+    location / { proxy_pass http://127.0.0.1:8080; proxy_set_header Host $host; }
+}
+```
+
+```bash
+sudo apt install -y nginx certbot python3-certbot-nginx
+sudo certbot --nginx -d menu.example.com
+```

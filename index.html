@@ -1008,7 +1008,7 @@ textarea.wish-input{resize:vertical;line-height:1.7}
     </div>
 
     <div class="search-wrap">
-      <input id="search" type="search" placeholder="搜索菜名 / 口味 / 食材…" autocomplete="off" />
+      <input id="search" type="search" placeholder="搜索菜名或口味…" autocomplete="off" />
     </div>
 
     <nav class="tabs" id="tabs" aria-label="分类"></nav>
@@ -1019,7 +1019,7 @@ textarea.wish-input{resize:vertical;line-height:1.7}
 
   <footer class="foot">
     <span id="count"></span>
-    <span class="hint">点开任意一道看食材与做法 · 内容在 menu-data.js 里改</span>
+    <span class="hint">点开看看口味，选好了交给我</span>
     <div class="sumikko-foot" aria-hidden="true">
       <img class="sk" src="images/friends/bear.png" alt="" />
       <img class="sk" src="images/friends/tapioca.png" alt="" />
@@ -1388,7 +1388,7 @@ textarea.wish-input{resize:vertical;line-height:1.7}
         '<div class="group-head-main">' +
           '<span class="accent-dot" aria-hidden="true"></span>' +
           '<h2 class="group-title">' + esc(g.label) + "</h2>" +
-          (g.icon ? '<img class="cat-glyph" src="images/friends/' + esc(g.icon) + '.png" alt="" loading="lazy" onerror="this.onerror=null;this.src=\'images/friends/bear.png\'" />' : "") +
+          (g.icon ? '<img class="cat-glyph" src="images/friends/' + esc(g.icon) + '.png?v=3" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'" />' : "") +
           '<span class="group-chevron" aria-hidden="true">▼</span>' +
         "</div>" +
         (g.note ? '<span class="group-note">' + esc(g.note) + "</span>" : "");
@@ -1437,7 +1437,7 @@ textarea.wish-input{resize:vertical;line-height:1.7}
     el.className = "card";
     el.tabIndex = 0;
     el.setAttribute("role", "button");
-    var meta = [d.time, d.level, d.serve].filter(Boolean).join(" · ");
+    var meta = [d.time, d.serve].filter(Boolean).join(" · ");
     el.innerHTML =
       '<div class="card-media' + (d.img ? "" : " no-img") + '">' +
         (d.img ? imageTag(d) : '<span aria-hidden="true">' + esc(String(d.name || "菜").charAt(0)) + "</span>") +
@@ -1512,12 +1512,9 @@ textarea.wish-input{resize:vertical;line-height:1.7}
     var tags = [];
     if (cat) tags.push('<span class="badge">' + esc(cat.label) + "</span>");
     if (d.time) tags.push('<span class="badge">耗时 · ' + esc(d.time) + "</span>");
-    if (d.level) tags.push('<span class="badge">难度 · ' + esc(d.level) + "</span>");
+
     if (d.serve) tags.push('<span class="badge">份量 · ' + esc(d.serve) + "</span>");
     if (d.tag) tags.push('<span class="badge tag">' + esc(d.tag) + "</span>");
-
-    var ing = (d.ingredients || []).map(function (x) { return "<li>" + esc(x) + "</li>"; }).join("");
-    var steps = (d.steps || []).map(function (x) { return "<li>" + esc(x) + "</li>"; }).join("");
 
     var body =
       (d.img
@@ -1536,9 +1533,6 @@ textarea.wish-input{resize:vertical;line-height:1.7}
         (state.online
           ? '<button class="btn-order" data-order="' + esc(itemId(d)) + '">＋ 加入今晚菜单</button>'
           : "") +
-        (ing ? '<div class="detail-section-title">食材</div><ul class="ing-list">' + ing + "</ul>" : "") +
-        (steps ? '<div class="detail-section-title">做法</div><ol class="steps">' + steps + "</ol>" : "") +
-        (d.tips ? '<div class="detail-section-title">小贴士</div><div class="tips-box">' + esc(d.tips) + "</div>" : "") +
       "</div>";
 
     $("#detail-body").innerHTML = body;
@@ -1594,7 +1588,7 @@ textarea.wish-input{resize:vertical;line-height:1.7}
             "</div>" +
             '<h3 class="tarot-name">' + esc(d.name) + "</h3>" +
             '<p class="tarot-en">' + esc(d.en || "—") + "</p>" +
-            '<div class="tarot-front-hint">点击看做法</div>' +
+            '<div class="tarot-front-hint">点击看看</div>' +
           "</div>" +
         "</div>" +
       "</div>";

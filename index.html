@@ -888,6 +888,26 @@ textarea.wish-input{resize:vertical;line-height:1.7}
 .wish-btn:hover{background-color:var(--accent);color:var(--chip-ink)}
 .wish-hint{min-height:22px;margin:14px 0 0;font-size:13px;color:var(--accent-2);text-align:center}
 
+/* ---------- 来客确认 ---------- */
+.guest{position:fixed;inset:0;z-index:70;display:flex;align-items:center;justify-content:center;padding:20px}
+.guest[hidden]{display:none}
+.guest-backdrop{position:absolute;inset:0;background:rgba(70,55,45,.34);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.guest-card{position:relative;width:min(380px,100%);padding:28px 26px 24px;border-radius:24px;
+  background-color:var(--modal-bg);border:1.5px dashed var(--line-strong);box-shadow:var(--shadow);text-align:center}
+.guest-mark{width:54px;height:54px;margin:0 auto 12px;border-radius:50%;border:1.5px dashed var(--accent);
+  display:flex;align-items:center;justify-content:center;color:var(--accent-2)}
+.guest-mark svg{width:26px;height:26px}
+.guest-hello{font-family:var(--serif);font-size:22px;margin:0 0 6px;color:var(--accent-2);letter-spacing:.03em}
+.guest-sub{color:var(--ink-dim);font-size:13px;margin:0 0 20px}
+.guest-label{display:block;text-align:left;font-size:12px;letter-spacing:.14em;color:var(--ink-dim);margin:0 0 7px}
+.guest-input{width:100%;box-sizing:border-box;margin-bottom:16px;padding:12px 14px;border-radius:13px;
+  border:1px solid var(--line);background-color:var(--accent-softer);color:var(--ink);
+  font:inherit;font-size:15px;outline:none}
+.guest-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.guest-btn{width:100%;padding:14px;border-radius:14px;border:1px solid var(--accent);
+  background-color:var(--accent);color:var(--chip-ink);font:inherit;font-size:15px;cursor:pointer;letter-spacing:.08em}
+.guest-btn:hover{filter:brightness(.96)}
+
 @media (prefers-reduced-motion:reduce){
   .cover-bg{animation:none}
   .cover-inner,.cover-eyebrow,.cover-divider,.cover-sub,.cover-enter{animation:none}
@@ -1012,6 +1032,24 @@ textarea.wish-input{resize:vertical;line-height:1.7}
   <img class="sumikko-side left" src="images/friends/cat.png" alt="" />
   <img class="sumikko-side right" src="images/friends/katsu.png" alt="" />
 
+  <div id="guest" class="guest" hidden>
+    <div class="guest-backdrop"></div>
+    <div class="guest-card" role="dialog" aria-modal="true" aria-labelledby="guestHello">
+      <div class="guest-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round">
+          <path d="M4 11h16"/><path d="M6 11a6 6 0 0 0 12 0"/><path d="M9.5 19h5"/><path d="M12 16.5V19"/>
+        </svg>
+      </div>
+      <h2 class="guest-hello" id="guestHello">「今天」的客人是？</h2>
+      <p class="guest-sub">留个称呼，我好知道这桌是谁点的</p>
+      <label class="guest-label">到访日期</label>
+      <input id="guestDate" class="guest-input" type="date" />
+      <label class="guest-label">昵称</label>
+      <input id="guestName" class="guest-input" type="text" maxlength="20" placeholder="神秘来客" />
+      <button id="guestOk" class="guest-btn">确认，开始点菜</button>
+    </div>
+  </div>
+
   <div id="cartBar" class="cart-bar" hidden>
     <span class="cart-count">已选 <b>0</b> 道</span>
     <button id="cartOpen" class="cart-btn">看看今晚菜单</button>
@@ -1092,6 +1130,7 @@ textarea.wish-input{resize:vertical;line-height:1.7}
     query: "",
     sound: localStorage.getItem("xj_sound") !== "0",
     cart: [],
+    guest: null,
     online: false,
     random: { stage: "pick", filter: null, chosen: false, revealed: false, current: null, last: null }
   };
@@ -1670,6 +1709,58 @@ textarea.wish-input{resize:vertical;line-height:1.7}
     }, 120);
   });
 
+  // ---------- 来客确认 ----------
+  function todayStr() {
+    var d = new Date();
+    var m = d.getMonth() + 1, day = d.getDate();
+    return d.getFullYear() + "-" + (m < 10 ? "0" + m : m) + "-" + (day < 10 ? "0" + day : day);
+  }
+
+  function loadGuest() {
+    try { state.guest = JSON.parse(localStorage.getItem("xj_guest") || "null"); } catch (e) { state.guest = null; }
+  }
+
+  function dateLabel(iso) {
+    if (!iso) return "今天";
+    var parts = iso.split("-");
+    return parseInt(parts[1], 10) + "月" + parseInt(parts[2], 10) + "日";
+  }
+
+  function openGuest() {
+    var g = $("#guest");
+    var dateEl = $("#guestDate");
+    var nameEl = $("#guestName");
+    if (!g) return;
+    dateEl.value = (state.guest && state.guest.date) || todayStr();
+    nameEl.value = (state.guest && state.guest.name) || "神秘来客";
+    $("#guestHello").textContent = "「" + dateLabel(dateEl.value) + "」的客人是？";
+    dateEl.oninput = function () {
+      $("#guestHello").textContent = "「" + dateLabel(dateEl.value) + "」的客人是？";
+    };
+    g.hidden = false;
+    document.body.style.overflow = "hidden";
+    setTimeout(function () { nameEl.focus(); nameEl.select && nameEl.select(); }, 200);
+  }
+
+  function closeGuest(save) {
+    if (save) {
+      var name = ($("#guestName").value || "").trim() || "神秘来客";
+      state.guest = { date: $("#guestDate").value || todayStr(), name: name };
+      try { localStorage.setItem("xj_guest", JSON.stringify(state.guest)); } catch (e) {}
+      var who = $("#cartWho");
+      if (who && !who.value) who.value = name;
+    }
+    $("#guest").hidden = true;
+    document.body.style.overflow = "";
+  }
+
+  document.addEventListener("click", function (e) {
+    if (e.target.closest("#guestOk")) closeGuest(true);
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Enter" && $("#guest") && !$("#guest").hidden) closeGuest(true);
+  });
+
   // ---------- 今晚菜单（点菜） ----------
   function toast(msg) {
     var t = document.getElementById("toast");
@@ -1750,7 +1841,8 @@ textarea.wish-input{resize:vertical;line-height:1.7}
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        who: ($("#cartWho") || {}).value || "",
+        who: (($("#cartWho") || {}).value || "").trim() || (state.guest && state.guest.name) || "神秘来客",
+        visit: (state.guest && state.guest.date) || "",
         note: ($("#cartNote") || {}).value || "",
         items: state.cart
       })
@@ -1800,6 +1892,7 @@ textarea.wish-input{resize:vertical;line-height:1.7}
     function enter() {
       cover.classList.add("hide");
       setTimeout(function () { cover.style.display = "none"; }, 900);
+      if (!state.guest) setTimeout(openGuest, 400);
     }
     $("#coverEnter").addEventListener("click", enter);
     cover.addEventListener("click", function (e) {
@@ -1809,6 +1902,7 @@ textarea.wish-input{resize:vertical;line-height:1.7}
 
   function start() {
     cartLoad();
+    loadGuest();
     fetch("api/menu", { cache: "no-store" })
       .then(function (r) { return r.ok ? r.json() : null; })
       .catch(function () { return null; })

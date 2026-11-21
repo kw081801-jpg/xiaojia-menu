@@ -402,6 +402,7 @@ class H(BaseHTTPRequestHandler):
                 d["orders"].append({
                     "id": (d["orders"][-1]["id"] + 1) if d["orders"] else 1,
                     "created": time.strftime("%Y-%m-%d %H:%M"),
+                    "visit": str(b.get("visit", ""))[:10],
                     "who": str(b.get("who", ""))[:40],
                     "note": str(b.get("note", ""))[:200],
                     "items": picked, "status": "new",

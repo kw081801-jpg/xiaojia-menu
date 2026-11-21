@@ -502,7 +502,8 @@ textarea{resize:vertical;line-height:1.65}
       $("#orderList").innerHTML = list.length ? list.map(function (o) {
         return '<div class="card order ' + o.status + '">' +
           '<h3>#' + o.id + ' · ' + o.items.map(function (i) { return esc(i.name); }).join("、") +
-          (o.who ? '<span class="who">' + esc(o.who) + " 点的</span>" : "") + "</h3>" +
+          (o.who ? '<span class="who">' + esc(o.who) + " 点的</span>" : "") +
+          (o.visit ? '<span class="who">· ' + esc(o.visit) + " 来</span>" : "") + "</h3>" +
           '<p>' + esc(o.created) + (o.note ? " · " + esc(o.note) : "") + "</p>" +
           '<div class="ops">' +
           '<button class="mini" data-done="' + o.id + '">' + (o.status === "new" ? "标记已做" : "改回未做") + "</button>" +

@@ -1157,12 +1157,24 @@ textarea.wish-input{resize:vertical;line-height:1.7}
   var CATS = [];
   var catMap = {};
 
+  var FRIENDS = ["bear", "katsu", "penguin", "cat", "lizard", "tapioca", "ebi", "weed", "snail", "tapioca-black"];
+
+  function friendOf(d, idx) {
+    if (!d) return "bear";
+    if (d._friend) return d._friend;
+    var i = typeof idx === "number" ? idx : D.indexOf(d);
+    if (i < 0) i = 0;
+    d._friend = FRIENDS[i % FRIENDS.length];
+    return d._friend;
+  }
+
   function applyData() {
     S = window.MENU_SETTINGS || {};
     D = window.MENU_ITEMS || [];
     CATS = S.categories || [];
     catMap = {};
     CATS.forEach(function (c) { catMap[c.key] = c; });
+    D.forEach(function (d) { delete d._friend; });
   }
   applyData();
 
@@ -1581,8 +1593,7 @@ textarea.wish-input{resize:vertical;line-height:1.7}
     $("#detail-body").innerHTML = body;
     var perch = $("#perchImg");
     if (perch) {
-      var pc = catMap[d.cat];
-      perch.src = "images/friends/" + (pc && pc.icon ? pc.icon : "bear") + ".png?v=3";
+      perch.src = "images/friends/" + friendOf(d) + ".png?v=3";
     }
     var m = $("#detail");
     m.hidden = false;

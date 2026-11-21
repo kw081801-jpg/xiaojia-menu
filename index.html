@@ -912,6 +912,8 @@ textarea.wish-input{resize:vertical;line-height:1.7}
 .cover-guest{margin:22px auto 0;max-width:420px;padding:0 16px}
 .cover-ask{margin:0 0 12px;font-family:var(--serif);font-size:clamp(15px,3.6vw,18px);
   color:#5a4c3d;letter-spacing:.04em;text-shadow:0 1px 0 rgba(255,255,255,.6)}
+.cover-ask .ask-name{color:#2f7568;font-weight:600;letter-spacing:.06em;margin-left:2px}
+.cover-ask .ask-q{color:#a89a89;margin-left:2px}
 .cover-fields{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
 .cover-field{display:flex;align-items:center;gap:8px;padding:7px 12px;border-radius:999px;
   background:rgba(255,253,249,.72);border:1px solid rgba(150,125,100,.22);
@@ -1922,8 +1924,11 @@ textarea.wish-input{resize:vertical;line-height:1.7}
 
     function refreshAsk() {
       if (!askEl) return;
-      var who = ((nameEl && nameEl.value) || "").trim() || "客人";
-      askEl.textContent = "「" + dateLabel(dateEl.value) + "」的" + who + "是？";
+      var who = ((nameEl && nameEl.value) || "").trim();
+      askEl.innerHTML = "「" + dateLabel(dateEl.value) + "」的客人是" +
+        (who ? '<span class="ask-name">' + who.replace(/[&<>]/g, function (c) {
+          return { "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c];
+        }) + "</span>" : '<span class="ask-q">？</span>');
     }
     if (dateEl) {
       dateEl.value = (state.guest && state.guest.date) || todayStr();

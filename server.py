@@ -10,6 +10,8 @@
 找图功能：Pexels（有 key 时）→ Openverse → Wikimedia Commons，都不需要账号。
 """
 
+import hashlib
+import hmac
 import json
 import mimetypes
 import os
@@ -71,6 +73,36 @@ def save(d):
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(d, f, ensure_ascii=False, indent=1)
     os.replace(tmp, DATA)
+
+
+def _secret():
+    with LOCK:
+        d = load()
+    if not d.get("secret"):
+        d["secret"] = secrets.token_hex(32)
+        with LOCK:
+            cur = load()
+            cur["secret"] = d["secret"]
+            save(cur)
+    return d["secret"]
+
+
+def make_token(ttl=7 * 86400):
+    exp = int(time.time()) + ttl
+    sig = hmac.new(_secret().encode(), str(exp).encode(), hashlib.sha256).hexdigest()[:32]
+    return "%d.%s" % (exp, sig)
+
+
+def check_token(tok):
+    try:
+        exp_s, sig = tok.split(".")
+        exp = int(exp_s)
+    except Exception:
+        return False
+    if exp < time.time():
+        return False
+    good = hmac.new(_secret().encode(), exp_s.encode(), hashlib.sha256).hexdigest()[:32]
+    return hmac.compare_digest(sig, good)
 
 
 def slug(text):
@@ -352,10 +384,11 @@ class H(BaseHTTPRequestHandler):
 
     def admin(self):
         t = self.token()
-        if t and SESSIONS.get(t, 0) > time.time():
+        if not t:
+            return False
+        if SESSIONS.get(t, 0) > time.time():
             return True
-        SESSIONS.pop(t, None)
-        return False
+        return check_token(t)
 
     def need_admin(self):
         if self.admin():
@@ -439,7 +472,7 @@ class H(BaseHTTPRequestHandler):
                     rec[1] = now + LOCK_SECONDS
                 return self.json({"error": "密码不对"}, 401)
             LOGIN_FAILS.pop(ip, None)
-            tok = secrets.token_urlsafe(24)
+            tok = make_token(7 * 86400)
             SESSIONS[tok] = time.time() + 7 * 86400
             return self.json({"ok": True}, cookie="xj_admin=%s; Path=/; HttpOnly; SameSite=Lax; Max-Age=%d" % (tok, 7 * 86400))
         if p == "/api/logout":

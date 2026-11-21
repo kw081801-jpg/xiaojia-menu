@@ -10,7 +10,12 @@ $ErrorActionPreference = "Stop"
 $AppDir = "C:\xiaojia-menu"
 $TaskName = "XiaojiaMenu"
 $ZipUrl = "https://ghproxy.net/https://github.com/kw081801-jpg/xiaojia-menu/archive/refs/heads/main.zip"
-$PyUrl = "https://www.python.org/ftp/python/3.12.10/python-3.12.10-amd64.exe"
+$PyMirrors = @(
+  "https://mirrors.huaweicloud.com/python/3.12.10/python-3.12.10-amd64.exe",
+  "https://mirrors.aliyun.com/python-release/windows/python-3.12.10-amd64.exe",
+  "https://registry.npmmirror.com/-/binary/python/3.12.10/python-3.12.10-amd64.exe",
+  "https://www.python.org/ftp/python/3.12.10/python-3.12.10-amd64.exe"
+)
 
 function Say($m) { Write-Host ""; Write-Host "==> $m" -ForegroundColor Cyan }
 
@@ -26,12 +31,23 @@ if (Get-NetTCPConnection -LocalPort 80 -State Listen -ErrorAction SilentlyContin
 Say "download site files"
 $zip = Join-Path $env:TEMP "xj-menu.zip"
 Invoke-WebRequest -Uri $ZipUrl -OutFile $zip -UseBasicParsing
+$saved = $null
+if (Test-Path (Join-Path $AppDir "data.json")) {
+  $saved = Join-Path $env:TEMP ("xj-data-" + [guid]::NewGuid().ToString("N") + ".json")
+  Copy-Item (Join-Path $AppDir "data.json") $saved
+  Write-Host "keep existing data.json"
+}
 if (Test-Path $AppDir) { Remove-Item $AppDir -Recurse -Force }
 $tmp = Join-Path $env:TEMP ("xj-" + [guid]::NewGuid().ToString("N"))
 Expand-Archive -Path $zip -DestinationPath $tmp -Force
 $inner = Get-ChildItem $tmp | Select-Object -First 1
 Move-Item $inner.FullName $AppDir
 Remove-Item $tmp, $zip -Recurse -Force -ErrorAction SilentlyContinue
+if ($saved -and (Test-Path $saved)) {
+  Copy-Item $saved (Join-Path $AppDir "data.json") -Force
+  Remove-Item $saved -Force
+  Write-Host "data.json restored"
+}
 Write-Host "files -> $AppDir"
 
 Say "check python"
@@ -68,12 +84,30 @@ function Find-Python {
 $py = Find-Python
 if ($py) { Write-Host "found existing python: $py" }
 if (-not $py) {
-  Say "install python 3.12 (~60s)"
+  Say "download python installer (trying cn mirrors first)"
   $exe = Join-Path $env:TEMP "py-install.exe"
-  Invoke-WebRequest -Uri $PyUrl -OutFile $exe -UseBasicParsing
-  Start-Process -FilePath $exe -ArgumentList "/quiet InstallAllUsers=1 PrependPath=1 Include_test=0" -Wait
-  Start-Sleep -Seconds 3
+  $got = $false
+  foreach ($u in $PyMirrors) {
+    try {
+      Write-Host "  from $u"
+      Invoke-WebRequest -Uri $u -OutFile $exe -UseBasicParsing -TimeoutSec 300
+      if ((Get-Item $exe).Length -gt 20MB) { $got = $true; break }
+      Write-Host "  too small, try next"
+    } catch {
+      Write-Host "  failed: $($_.Exception.Message)"
+    }
+  }
+  if (-not $got) { throw "python installer download failed on all mirrors" }
+
+  Say "install python 3.12 (silent, ~60s)"
+  Start-Process -FilePath $exe -ArgumentList "/quiet InstallAllUsers=1 PrependPath=1 Include_test=0 Include_pip=0" -Wait
+  Start-Sleep -Seconds 5
   $py = Find-Python
+  if (-not $py) {
+    # 有些安装包装到用户目录
+    $alt = "$env:LOCALAPPDATA\Programs\Python\Python312\python.exe"
+    if (Test-Path $alt) { $py = $alt }
+  }
 }
 if (-not $py) { throw "python not installed" }
 Write-Host "python: $py  $(& $py -V)"

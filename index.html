@@ -1310,12 +1310,19 @@ body{
     countEl.textContent = "共 " + shown + " 道" + (q ? "（搜索「" + state.query.trim() + "」）" : "");
   }
 
+  function smallVariant(img) {
+    // 只有仓库里随附的图有 560px 版本；上传到 images/uploads/ 的图没有缩略图
+    if (!/^images\/(?!uploads\/)/.test(img)) return "";
+    if (/\/sm\//.test(img)) return "";
+    return img.replace(/^images\//, "images/sm/");
+  }
+
   function imageTag(d, cls, sizes) {
     if (d.img) {
-      var small = d.img.replace(/^images\//, "images/sm/");
-      return '<img class="' + (cls || "") + '" src="' + esc(d.img) + '"' +
-        ' srcset="' + esc(small) + ' 560w, ' + esc(d.img) + ' 900w"' +
-        ' sizes="' + (sizes || "(max-width:600px) 92vw, (max-width:1000px) 46vw, 340px") + '"' +
+      var small = smallVariant(d.img);
+      var srcset = small ? ' srcset="' + esc(small) + ' 560w, ' + esc(d.img) + ' 900w"' : "";
+      return '<img class="' + (cls || "") + '" src="' + esc(d.img) + '"' + srcset +
+        (srcset ? ' sizes="' + (sizes || "(max-width:600px) 92vw, (max-width:1000px) 46vw, 340px") + '"' : "") +
         ' alt="' + esc(d.name) + '" loading="lazy" decoding="async" />';
     }
     return "";

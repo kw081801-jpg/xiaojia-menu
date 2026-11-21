@@ -96,26 +96,23 @@
 
 ## 关于角色形象
 
-页面里的小家伙（白熊、炸猪排、珍珠、绿蜥蜴、猫）**不是三丽鸥的官方素材**，没有用任何官方立绘、贴纸或 Logo，全是按印象手写的 SVG 仿造型（圆头、点眼、腮红、和纸胶带配色那一套）。它们只借了「角落生物」的风格气质，比例和线条都是自己画的。
+页面里的小家伙用的是《すみっコぐらし》官方画风的角色立绘：白熊、企鹅？、炸猪排、猫、蜥蜴、珍珠、炸虾尾、杂草、假蜗牛。原始图来自该 IP 的手游/主机游戏攻略 Wiki 的角色图鉴（透明底 PNG，约 150×180），我把每张图底部的日文名字条裁掉、去掉透明留白，统一放进 `images/friends/`：
 
-想换成官方形象，可以把 PNG 放进 `images/`（或新建 `assets/friends/`），再把页面里 `<svg class="sk"><use href="#sk-xxx"></use></svg>` 换成 `<img src="...">` 即可，尺寸沿用 `.sk` 那组 clamp 规则。
-
-## 上线与更新
-
-托管在 GitHub Pages：仓库 <https://github.com/kw081801-jpg/xiaojia-menu>，`main` 分支根目录直接发布。
-
-改完内容后三行更新：
-
-```bash
-git add -A
-git commit -m "改了什么"
-git push
+```
+images/friends/bear.png     しろくま
+images/friends/penguin.png  ぺんぎん？
+images/friends/katsu.png    とんかつ
+images/friends/cat.png      ねこ
+images/friends/lizard.png   とかげ
+images/friends/tapioca.png  たぴおか
+images/friends/ebi.png      えびふらいのしっぽ
+images/friends/weed.png     ざっそう
+images/friends/snail.png    にせつむり
 ```
 
-推上去大约 30 秒后自动生效，刷新页面即可（手机上建议强制刷新一次）。
+这些都是三丽鸥的角色形象，版权属于 Sanrio。自己家里用没问题；如果要公开发布或商用，需要走三丽鸥的授权。
 
-默认主题是「角落」，其他人第一次打开看到的就是这套；换过主题的访客会被记在本地，下次进来还是他选的那套。
-
+想换成自己的图：把同名 PNG 覆盖进去即可（建议透明底、高度 200px 以上），CSS 里 `.sk` 那组 `height + object-fit:contain` 会自动适配，不用改代码。
 ## 打开速度（国内手机流量）
 
 页面现在**不请求任何境外资源**，字体、样式、图片全部同域加载：

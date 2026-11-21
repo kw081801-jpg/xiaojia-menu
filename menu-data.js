@@ -39,11 +39,11 @@ window.MENU_SETTINGS = {
 
   // 分类顺序 = 「全部」视图里的分组顺序
   categories: [
-    { key: "home",   label: "家常小炒", en: "Home",   note: "灶台边的日常", icon: "wok" },
-    { key: "soup",   label: "汤羹",    en: "Soup",   note: "小火慢煨", icon: "pot" },
-    { key: "staple", label: "主食",    en: "Staple", note: "一碗管饱", icon: "bowl" },
-    { key: "sweet",  label: "甜品",    en: "Sweet",  note: "饭后一点甜", icon: "cake" },
-    { key: "drink",  label: "饮品",    en: "Drink",  note: "冰的、热的", icon: "cup" }
+    { key: "home",   label: "家常小炒", en: "Home",   note: "灶台边的日常", icon: "katsu" },
+    { key: "soup",   label: "汤羹",    en: "Soup",   note: "小火慢煨", icon: "penguin" },
+    { key: "staple", label: "主食",    en: "Staple", note: "一碗管饱", icon: "bear" },
+    { key: "sweet",  label: "甜品",    en: "Sweet",  note: "饭后一点甜", icon: "tapioca" },
+    { key: "drink",  label: "饮品",    en: "Drink",  note: "冰的、热的", icon: "lizard" }
   ]
 };
 

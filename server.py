@@ -1,346 +1,426 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-小家菜单 · 后端（零依赖，只用 Python 标准库）
+小家菜单 · 后端（Python 标准库，无第三方依赖）
 
-    python server.py                # 默认 0.0.0.0:8080
-    python server.py --port 9000
+    python server.py                     # 0.0.0.0:8080
+    XJ_ADMIN_PASSWORD=新密码 python server.py
 
-第一次打开 http://localhost:8080/admin.html
-默认管理密码：xiaojia   （用环境变量 XJ_ADMIN_PASSWORD 覆盖，上线一定要改）
-
-数据落在一个 SQLite 文件 data.db 里，删掉它等于恢复出厂设置。
+数据就一个 data.json：settings / items / orders。删掉即恢复出厂。
+找图功能：Pexels（有 key 时）→ Openverse → Wikimedia Commons，都不需要账号。
 """
 
-import base64
-import hashlib
-import hmac
 import json
 import mimetypes
 import os
 import re
 import secrets
-import sqlite3
 import sys
+import threading
 import time
 import urllib.parse
+import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(ROOT, "data.db")
-UPLOAD_DIR = os.path.join(ROOT, "images", "uploads")
+DATA = os.path.join(ROOT, "data.json")
+UPLOADS = os.path.join(ROOT, "images", "uploads")
 PASSWORD = os.environ.get("XJ_ADMIN_PASSWORD", "xiaojia")
-SESSIONS = {}          # token -> expire_ts
-SESSION_TTL = 7 * 24 * 3600
+PEXELS_KEY = os.environ.get("PEXELS_API_KEY", "")
+UA = "XiaojiaMenu/1.0 (+personal use)"
+UA_BROWSER = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
+LOCK = threading.Lock()
+SESSIONS = {}          # token -> 过期时间戳
+SEARCH_CACHE = {}      # 关键词 -> (时间戳, 结果)
 
 mimetypes.add_type("image/webp", ".webp")
 mimetypes.add_type("font/woff2", ".woff2")
-mimetypes.add_type("application/javascript", ".js")
 
-# ---------------------------------------------------------------- db
+# ---------------------------------------------------------------- 数据
 
-def db():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
-
-
-def init_db():
-    conn = db()
-    conn.executescript(
-        """
-        CREATE TABLE IF NOT EXISTS items (
-            id TEXT PRIMARY KEY, sort INTEGER, data TEXT NOT NULL
-        );
-        CREATE TABLE IF NOT EXISTS settings (
-            id INTEGER PRIMARY KEY CHECK (id = 1), data TEXT NOT NULL
-        );
-        CREATE TABLE IF NOT EXISTS orders (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            created TEXT NOT NULL, who TEXT, note TEXT, items TEXT NOT NULL,
-            status TEXT NOT NULL DEFAULT 'new'
-        );
-        """
-    )
-    conn.commit()
-    conn.close()
+def load():
+    if not os.path.exists(DATA):
+        return {"settings": {}, "items": [], "orders": []}
+    with open(DATA, encoding="utf-8") as f:
+        d = json.load(f)
+    d.setdefault("settings", {})
+    d.setdefault("items", [])
+    d.setdefault("orders", [])
+    return d
 
 
-def get_settings():
-    conn = db()
-    row = conn.execute("SELECT data FROM settings WHERE id = 1").fetchone()
-    conn.close()
-    return json.loads(row["data"]) if row else {}
+def save(d):
+    tmp = DATA + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(d, f, ensure_ascii=False, indent=1)
+    os.replace(tmp, DATA)
 
 
-def put_settings(data):
-    conn = db()
-    conn.execute(
-        "INSERT INTO settings (id, data) VALUES (1, ?) "
-        "ON CONFLICT(id) DO UPDATE SET data = excluded.data",
-        (json.dumps(data, ensure_ascii=False),),
-    )
-    conn.commit()
-    conn.close()
+def slug(text):
+    return re.sub(r"[^\w\u4e00-\u9fff-]+", "-", str(text)).strip("-")[:40] or "dish"
 
 
-def list_items():
-    conn = db()
-    rows = conn.execute("SELECT data FROM items ORDER BY sort, rowid").fetchall()
-    conn.close()
-    return [json.loads(r["data"]) for r in rows]
+# ---------------------------------------------------------------- 找图
+
+def _get(url, timeout=20, limit=8 * 1024 * 1024):
+    req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "application/json,image/*"})
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return r.read(limit), r.headers.get("Content-Type", "")
 
 
-def upsert_item(item):
-    data = dict(item)
-    if not data.get("id"):
-        base = slugify(data.get("name") or "dish")
-        data["id"] = base + "-" + secrets.token_hex(3)
-    conn = db()
-    nxt = conn.execute("SELECT COALESCE(MAX(sort), 0) + 1 FROM items").fetchone()[0]
-    conn.execute(
-        "INSERT INTO items (id, sort, data) VALUES (?, ?, ?) "
-        "ON CONFLICT(id) DO UPDATE SET data = excluded.data",
-        (data["id"], data.get("sort") or nxt, json.dumps(data, ensure_ascii=False)),
-    )
-    conn.commit()
-    conn.close()
-    return data
+def search_openverse(q):
+    u = ("https://api.openverse.org/v1/images/?q=%s&page_size=8&size=large&mature=false"
+         % urllib.parse.quote(q))
+    data, _ = _get(u, timeout=15)
+    out = []
+    for it in json.loads(data).get("results", []):
+        if it.get("url"):
+            out.append({
+                "url": it["url"], "thumb": it.get("thumbnail") or it["url"],
+                "title": (it.get("title") or "")[:60], "source": "Openverse",
+                "license": (it.get("license") or "").upper(),
+            })
+    return out
 
 
-def delete_item(item_id):
-    conn = db()
-    cur = conn.execute("DELETE FROM items WHERE id = ?", (item_id,))
-    conn.commit()
-    conn.close()
-    return cur.rowcount > 0
+def search_wikimedia(q):
+    u = ("https://commons.wikimedia.org/w/api.php?action=query&format=json&generator=search"
+         "&gsrnamespace=6&gsrlimit=8&gsrsearch=%s&prop=imageinfo&iiprop=url&iiurlwidth=1200"
+         % urllib.parse.quote("filetype:bitmap " + q))
+    data, _ = _get(u, timeout=15)
+    pages = (json.loads(data).get("query") or {}).get("pages", {})
+    out = []
+    for p in pages.values():
+        info = (p.get("imageinfo") or [{}])[0]
+        if info.get("url"):
+            out.append({
+                "url": info["url"], "thumb": info.get("thumburl") or info["url"],
+                "title": (p.get("title") or "").replace("File:", "")[:60],
+                "source": "Wikimedia", "license": "CC",
+            })
+    return out
 
 
-def replace_all(settings, items):
-    conn = db()
-    conn.execute("DELETE FROM items")
-    for i, it in enumerate(items):
-        data = dict(it)
-        if not data.get("id"):
-            data["id"] = slugify(data.get("name") or "dish") + "-" + secrets.token_hex(3)
-        conn.execute(
-            "INSERT INTO items (id, sort, data) VALUES (?, ?, ?)",
-            (data["id"], i + 1, json.dumps(data, ensure_ascii=False)),
-        )
-    conn.commit()
-    conn.close()
-    if settings is not None:
-        put_settings(settings)
+def search_wikipedia(name, lang="zh"):
+    """维基条目首图往往就是这道菜本身，命中最准。"""
+    if not name:
+        return []
+    u = "https://%s.wikipedia.org/api/rest_v1/page/summary/%s" % (lang, urllib.parse.quote(name))
+    data, _ = _get(u, timeout=12)
+    d = json.loads(data)
+    img = (d.get("originalimage") or {}).get("source")
+    if not img:
+        return []
+    return [{
+        "url": img, "thumb": (d.get("thumbnail") or {}).get("source") or img,
+        "title": d.get("title") or name, "source": "Wikipedia", "license": "CC",
+    }]
 
 
-def slugify(text):
-    text = re.sub(r"[^\w\u4e00-\u9fff-]+", "-", str(text)).strip("-")
-    return text or "dish"
+def search_pexels(q):
+    u = ("https://api.pexels.com/v1/search?query=%s&per_page=8&orientation=landscape"
+         % urllib.parse.quote(q))
+    req = urllib.request.Request(u, headers={"Authorization": PEXELS_KEY, "User-Agent": UA})
+    with urllib.request.urlopen(req, timeout=15) as r:
+        data = json.loads(r.read())
+    return [{
+        "url": p["src"]["large2x"], "thumb": p["src"]["medium"],
+        "title": (p.get("alt") or "")[:60], "source": "Pexels", "license": "Pexels",
+    } for p in data.get("photos", [])]
 
 
-# ---------------------------------------------------------------- http
+def find_images(q, name=""):
+    key = (q + "|" + name).lower().strip()
+    hit = SEARCH_CACHE.get(key)
+    if hit and time.time() - hit[0] < 3600:
+        return hit[1]
+    results = []
+    plan = ([search_pexels] if PEXELS_KEY else []) + [search_openverse, search_wikimedia]
+    if name:
+        plan.insert(0, lambda _q, n=name: search_wikipedia(n, "zh"))
+    if q:
+        plan.append(lambda _q: search_wikipedia(_q, "en"))
+    for fn in plan:
+        try:
+            results += fn(q)
+        except Exception:
+            continue
+        if len(results) >= 10:
+            break
+    seen, out = set(), []
+    for r in results:
+        if r["url"] in seen:
+            continue
+        seen.add(r["url"])
+        out.append(r)
+    SEARCH_CACHE[key] = (time.time(), out[:8])
+    return out[:8]
 
-class Handler(BaseHTTPRequestHandler):
-    server_version = "XiaojiaMenu/1.0"
 
-    # ---- helpers
-    def _json(self, data, code=200):
-        body = json.dumps(data, ensure_ascii=False).encode("utf-8")
+def download_image(url, name):
+    req = urllib.request.Request(url, headers={
+        "User-Agent": UA_BROWSER,
+        "Referer": "https://commons.wikimedia.org/",
+        "Accept": "image/avif,image/webp,image/*,*/*;q=0.8",
+    })
+    try:
+        with urllib.request.urlopen(req, timeout=25) as r:
+            ctype = r.headers.get("Content-Type", "")
+            data = r.read(8 * 1024 * 1024)
+    except Exception:
+        time.sleep(1)
+        with urllib.request.urlopen(req, timeout=25) as r:
+            ctype = r.headers.get("Content-Type", "")
+            data = r.read(8 * 1024 * 1024)
+    if not ctype.startswith("image/"):
+        raise ValueError("不是图片：" + ctype)
+    ext = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp",
+           "image/gif": ".gif"}.get(ctype.split(";")[0], ".jpg")
+    base = (re.sub(r"[^a-z0-9]+", "-", slug(name).lower()).strip("-")[:28] or "dish") + "-" + secrets.token_hex(3)
+    os.makedirs(UPLOADS, exist_ok=True)
+    path = os.path.join(UPLOADS, base + ext)
+    with open(path, "wb") as f:
+        f.write(data)
+    try:  # 有 Pillow 就顺手压成 webp，没有就原样留着
+        from PIL import Image
+        im = Image.open(path)
+        im.thumbnail((1400, 1400))
+        webp = os.path.join(UPLOADS, base + ".webp")
+        im.convert("RGB").save(webp, "WEBP", quality=82, method=5)
+        if webp != path:
+            os.remove(path)
+        return "images/uploads/" + base + ".webp"
+    except Exception:
+        return "images/uploads/" + os.path.basename(path)
+
+
+# ---------------------------------------------------------------- HTTP
+
+class H(BaseHTTPRequestHandler):
+    server_version = "XiaojiaMenu/2"
+
+    def json(self, obj, code=200, cookie=None):
+        body = json.dumps(obj, ensure_ascii=False).encode()
         self.send_response(code)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
+        if cookie:
+            self.send_header("Set-Cookie", cookie)
         self.end_headers()
         self.wfile.write(body)
 
-    def _body(self):
+    def body(self):
         n = int(self.headers.get("Content-Length") or 0)
-        if not n:
-            return {}
-        raw = self.rfile.read(n)
         try:
-            return json.loads(raw.decode("utf-8"))
+            return json.loads(self.rfile.read(n).decode()) if n else {}
         except Exception:
             return {}
 
-    def _cookie_token(self):
-        raw = self.headers.get("Cookie") or ""
-        for part in raw.split(";"):
+    def token(self):
+        for part in (self.headers.get("Cookie") or "").split(";"):
             k, _, v = part.strip().partition("=")
             if k == "xj_admin":
                 return v
         return None
 
-    def _is_admin(self):
-        tok = self._cookie_token()
-        exp = SESSIONS.get(tok) if tok else None
-        if not exp:
-            return False
-        if exp < time.time():
-            SESSIONS.pop(tok, None)
-            return False
-        return True
-
-    def _require_admin(self):
-        if self._is_admin():
+    def admin(self):
+        t = self.token()
+        if t and SESSIONS.get(t, 0) > time.time():
             return True
-        self._json({"error": "需要登录"}, 401)
+        SESSIONS.pop(t, None)
         return False
 
-    # ---- routing
+    def need_admin(self):
+        if self.admin():
+            return True
+        self.json({"error": "需要登录"}, 401)
+        return False
+
+    # ---------- GET ----------
     def do_GET(self):
-        path = urllib.parse.urlparse(self.path).path
-        if path.startswith("/api/"):
-            return self.api_get(path)
-        return self.static(path)
+        p = urllib.parse.urlparse(self.path)
+        qs = urllib.parse.parse_qs(p.query)
+        if p.path == "/api/menu":
+            with LOCK:
+                d = load()
+            return self.json({"settings": d["settings"], "items": d["items"]})
+        if p.path == "/api/session":
+            return self.json({"ok": self.admin()})
+        if p.path == "/api/orders":
+            if not self.need_admin():
+                return
+            with LOCK:
+                d = load()
+            return self.json({"orders": list(reversed(d["orders"]))})
+        if p.path == "/api/thumb":
+            u = (qs.get("u") or [""])[0]
+            if not u.startswith(("http://", "https://")):
+                return self.json({"error": "bad"}, 400)
+            try:
+                req = urllib.request.Request(u, headers={"User-Agent": UA_BROWSER, "Referer": "https://commons.wikimedia.org/"})
+                with urllib.request.urlopen(req, timeout=20) as r:
+                    body = r.read(4 * 1024 * 1024)
+                    ctype = r.headers.get("Content-Type", "image/jpeg")
+            except Exception:
+                return self.json({"error": "拿不到图"}, 502)
+            self.send_response(200)
+            self.send_header("Content-Type", ctype)
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Cache-Control", "public, max-age=3600")
+            self.end_headers()
+            self.wfile.write(body)
+            return
+        if p.path == "/api/find-image":
+            if not self.need_admin():
+                return
+            q = (qs.get("q") or [""])[0].strip()
+            name = (qs.get("name") or [""])[0].strip()
+            if not q and not name:
+                return self.json({"error": "给个搜索词"}, 400)
+            return self.json({"results": find_images(q or name, name)})
+        return self.static(p.path)
 
+    # ---------- POST ----------
     def do_POST(self):
-        path = urllib.parse.urlparse(self.path).path
-        data = self._body()
-        if path == "/api/login":
-            if hmac.compare_digest(str(data.get("password", "")), PASSWORD):
-                tok = secrets.token_urlsafe(24)
-                SESSIONS[tok] = time.time() + SESSION_TTL
-                body = json.dumps({"ok": True}).encode()
-                self.send_response(200)
-                self.send_header("Content-Type", "application/json")
-                self.send_header("Content-Length", str(len(body)))
-                self.send_header(
-                    "Set-Cookie",
-                    "xj_admin=%s; Path=/; HttpOnly; SameSite=Lax; Max-Age=%d" % (tok, SESSION_TTL),
-                )
-                self.end_headers()
-                self.wfile.write(body)
-                return
-            return self._json({"error": "密码不对"}, 401)
-        if path == "/api/logout":
-            tok = self._cookie_token()
-            if tok:
-                SESSIONS.pop(tok, None)
-            return self._json({"ok": True})
-        if path == "/api/orders":
-            items = data.get("items") or []
-            if not isinstance(items, list) or not items:
-                return self._json({"error": "没选菜"}, 400)
-            known = {i.get("id"): i.get("name") for i in list_items()}
-            resolved = [{"id": i, "name": known.get(i, i)} for i in items if i in known]
-            if not resolved:
-                return self._json({"error": "菜不在菜单里"}, 400)
-            conn = db()
-            conn.execute(
-                "INSERT INTO orders (created, who, note, items, status) VALUES (?, ?, ?, ?, 'new')",
-                (
-                    time.strftime("%Y-%m-%d %H:%M"),
-                    str(data.get("who", ""))[:40],
-                    str(data.get("note", ""))[:200],
-                    json.dumps(resolved, ensure_ascii=False),
-                ),
-            )
-            conn.commit()
-            oid = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
-            conn.close()
-            return self._json({"ok": True, "id": oid})
-        if path == "/api/items":
-            if not self._require_admin():
-                return
-            item = data.get("item") or {}
-            if not (item.get("name") or "").strip():
-                return self._json({"error": "菜名不能空"}, 400)
-            return self._json({"ok": True, "item": upsert_item(item)})
-        if path == "/api/settings":
-            if not self._require_admin():
-                return
-            put_settings(data.get("settings") or {})
-            return self._json({"ok": True})
-        if path == "/api/seed":
-            if not self._require_admin():
-                return
-            replace_all(data.get("settings"), data.get("items") or [])
-            return self._json({"ok": True, "count": len(data.get("items") or [])})
-        if path == "/api/upload":
-            if not self._require_admin():
-                return
-            blob = str(data.get("data") or "")
-            m = re.match(r"data:image/(png|jpeg|jpg|webp);base64,(.+)", blob)
-            if not m:
-                return self._json({"error": "只收 png/jpg/webp"}, 400)
-            ext = "jpg" if m.group(1) in ("jpeg", "jpg") else m.group(1)
-            raw = base64.b64decode(m.group(2))
-            if len(raw) > 6 * 1024 * 1024:
-                return self._json({"error": "图太大（上限 6MB）"}, 400)
-            os.makedirs(UPLOAD_DIR, exist_ok=True)
-            name = slugify(data.get("name") or "img")[:40] + "-" + secrets.token_hex(4) + "." + ext
-            with open(os.path.join(UPLOAD_DIR, name), "wb") as f:
-                f.write(raw)
-            return self._json({"ok": True, "path": "images/uploads/" + name})
-        return self._json({"error": "not found"}, 404)
+        p = urllib.parse.urlparse(self.path).path
+        b = self.body()
 
+        if p == "/api/login":
+            if not secrets.compare_digest(str(b.get("password", "")), PASSWORD):
+                return self.json({"error": "密码不对"}, 401)
+            tok = secrets.token_urlsafe(24)
+            SESSIONS[tok] = time.time() + 7 * 86400
+            return self.json({"ok": True}, cookie="xj_admin=%s; Path=/; HttpOnly; SameSite=Lax; Max-Age=%d" % (tok, 7 * 86400))
+        if p == "/api/logout":
+            SESSIONS.pop(self.token(), None)
+            return self.json({"ok": True})
+        if p == "/api/orders":
+            ids = b.get("items") or []
+            with LOCK:
+                d = load()
+                names = {i.get("id"): i.get("name") for i in d["items"]}
+                picked = [{"id": i, "name": names.get(i, i)} for i in ids if i in names]
+                if not picked:
+                    return self.json({"error": "菜不在菜单里"}, 400)
+                d["orders"].append({
+                    "id": (d["orders"][-1]["id"] + 1) if d["orders"] else 1,
+                    "created": time.strftime("%Y-%m-%d %H:%M"),
+                    "who": str(b.get("who", ""))[:40],
+                    "note": str(b.get("note", ""))[:200],
+                    "items": picked, "status": "new",
+                })
+                save(d)
+                return self.json({"ok": True, "id": d["orders"][-1]["id"]})
+        if p == "/api/items":
+            if not self.need_admin():
+                return
+            it = b.get("item") or {}
+            if not str(it.get("name", "")).strip():
+                return self.json({"error": "菜名不能空"}, 400)
+            with LOCK:
+                d = load()
+                it["id"] = it.get("id") or slug(it["name"]) + "-" + secrets.token_hex(3)
+                for i, old in enumerate(d["items"]):
+                    if old.get("id") == it["id"]:
+                        d["items"][i] = it
+                        break
+                else:
+                    d["items"].append(it)
+                save(d)
+            return self.json({"ok": True, "item": it})
+        if p == "/api/settings":
+            if not self.need_admin():
+                return
+            with LOCK:
+                d = load()
+                d["settings"] = b.get("settings") or d["settings"]
+                save(d)
+            return self.json({"ok": True})
+        if p == "/api/seed":
+            if not self.need_admin():
+                return
+            with LOCK:
+                d = load()
+                d["settings"] = b.get("settings") or d["settings"]
+                d["items"] = b.get("items") or []
+                save(d)
+            return self.json({"ok": True, "count": len(d["items"])})
+        if p == "/api/upload":
+            if not self.need_admin():
+                return
+            m = re.match(r"data:image/(png|jpeg|jpg|webp);base64,(.+)", str(b.get("data") or ""))
+            if not m:
+                return self.json({"error": "只收 png/jpg/webp"}, 400)
+            raw = __import__("base64").b64decode(m.group(2))
+            if len(raw) > 8 * 1024 * 1024:
+                return self.json({"error": "图太大（8MB 以内）"}, 400)
+            os.makedirs(UPLOADS, exist_ok=True)
+            ext = ".jpg" if m.group(1) in ("jpeg", "jpg") else "." + m.group(1)
+            name = (re.sub(r"[^a-z0-9]+", "-", slug(b.get("name") or "img").lower()).strip("-")[:28] or "img") + "-" + secrets.token_hex(3) + ext
+            with open(os.path.join(UPLOADS, name), "wb") as f:
+                f.write(raw)
+            return self.json({"ok": True, "path": "images/uploads/" + name})
+        if p == "/api/fetch-image":
+            if not self.need_admin():
+                return
+            url = str(b.get("url") or "")
+            if not url.startswith(("http://", "https://")):
+                return self.json({"error": "地址不对"}, 400)
+            try:
+                return self.json({"ok": True, "path": download_image(url, b.get("name") or "dish")})
+            except Exception as e:
+                return self.json({"error": str(e)}, 400)
+        return self.json({"error": "not found"}, 404)
+
+    # ---------- DELETE / PATCH ----------
     def do_DELETE(self):
-        path = urllib.parse.urlparse(self.path).path
-        if path.startswith("/api/items/"):
-            if not self._require_admin():
+        p = urllib.parse.urlparse(self.path).path
+        if p.startswith("/api/items/"):
+            if not self.need_admin():
                 return
-            return self._json({"ok": delete_item(path.rsplit("/", 1)[-1])})
-        if path.startswith("/api/orders/"):
-            if not self._require_admin():
+            iid = p.rsplit("/", 1)[-1]
+            with LOCK:
+                d = load()
+                d["items"] = [i for i in d["items"] if i.get("id") != iid]
+                save(d)
+            return self.json({"ok": True})
+        if p.startswith("/api/orders/"):
+            if not self.need_admin():
                 return
-            oid = path.rsplit("/", 1)[-1]
-            conn = db()
-            conn.execute("DELETE FROM orders WHERE id = ?", (oid,))
-            conn.commit()
-            conn.close()
-            return self._json({"ok": True})
-        return self._json({"error": "not found"}, 404)
+            oid = p.rsplit("/", 1)[-1]
+            with LOCK:
+                d = load()
+                d["orders"] = [o for o in d["orders"] if str(o.get("id")) != oid]
+                save(d)
+            return self.json({"ok": True})
+        return self.json({"error": "not found"}, 404)
 
     def do_PATCH(self):
-        path = urllib.parse.urlparse(self.path).path
-        if path.startswith("/api/orders/"):
-            if not self._require_admin():
+        p = urllib.parse.urlparse(self.path).path
+        if p.startswith("/api/orders/"):
+            if not self.need_admin():
                 return
-            oid = path.rsplit("/", 1)[-1]
-            status = (self._body().get("status") or "new")[:10]
-            conn = db()
-            conn.execute("UPDATE orders SET status = ? WHERE id = ?", (status, oid))
-            conn.commit()
-            conn.close()
-            return self._json({"ok": True})
-        return self._json({"error": "not found"}, 404)
+            oid = p.rsplit("/", 1)[-1]
+            status = str(self.body().get("status") or "new")[:10]
+            with LOCK:
+                d = load()
+                for o in d["orders"]:
+                    if str(o.get("id")) == oid:
+                        o["status"] = status
+                save(d)
+            return self.json({"ok": True})
+        return self.json({"error": "not found"}, 404)
 
-    def api_get(self, path):
-        if path == "/api/menu":
-            return self._json({"settings": get_settings(), "items": list_items()})
-        if path == "/api/session":
-            return self._json({"ok": self._is_admin()})
-        if path == "/api/orders":
-            if not self._require_admin():
-                return
-            conn = db()
-            rows = conn.execute("SELECT * FROM orders ORDER BY id DESC LIMIT 200").fetchall()
-            conn.close()
-            out = []
-            for r in rows:
-                out.append(
-                    {
-                        "id": r["id"],
-                        "created": r["created"],
-                        "who": r["who"],
-                        "note": r["note"],
-                        "items": json.loads(r["items"]),
-                        "status": r["status"],
-                    }
-                )
-            return self._json({"orders": out})
-        return self._json({"error": "not found"}, 404)
-
+    # ---------- 静态 ----------
     def static(self, path):
         if path in ("/", ""):
             path = "/index.html"
-        rel = urllib.parse.unquote(path.lstrip("/"))
-        full = os.path.abspath(os.path.join(ROOT, rel))
+        full = os.path.abspath(os.path.join(ROOT, urllib.parse.unquote(path.lstrip("/"))))
         if not full.startswith(ROOT) or not os.path.isfile(full):
-            return self._json({"error": "not found"}, 404)
+            return self.json({"error": "not found"}, 404)
         ctype = mimetypes.guess_type(full)[0] or "application/octet-stream"
-        if ctype.startswith("text/") or ctype in ("application/javascript", "application/json"):
+        if ctype.startswith("text/") or "javascript" in ctype:
             ctype += "; charset=utf-8"
         with open(full, "rb") as f:
             body = f.read()
@@ -351,28 +431,22 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
-    def log_message(self, fmt, *args):
-        sys.stderr.write("%s %s\n" % (time.strftime("%H:%M:%S"), fmt % args))
+    def log_message(self, fmt, *a):
+        sys.stderr.write("%s %s\n" % (time.strftime("%H:%M:%S"), fmt % a))
 
 
 def main():
-    port = 8080
-    host = "0.0.0.0"
-    args = sys.argv[1:]
-    for i, a in enumerate(args):
-        if a == "--port" and i + 1 < len(args):
-            port = int(args[i + 1])
-        if a == "--host" and i + 1 < len(args):
-            host = args[i + 1]
-    init_db()
-    os.makedirs(UPLOAD_DIR, exist_ok=True)
-    srv = ThreadingHTTPServer((host, port), Handler)
-    print("小家菜单后端：http://127.0.0.1:%d/  管理台 /admin.html" % port)
-    print("数据文件：%s" % DB_PATH)
-    try:
-        srv.serve_forever()
-    except KeyboardInterrupt:
-        print("\nbye")
+    port, host = 8080, "0.0.0.0"
+    argv = sys.argv[1:]
+    for i, a in enumerate(argv):
+        if a == "--port":
+            port = int(argv[i + 1])
+        if a == "--host":
+            host = argv[i + 1]
+    os.makedirs(UPLOADS, exist_ok=True)
+    print("小家菜单：http://127.0.0.1:%d/   管理台 /admin.html" % port)
+    print("数据：%s" % DATA)
+    ThreadingHTTPServer((host, port), H).serve_forever()
 
 
 if __name__ == "__main__":

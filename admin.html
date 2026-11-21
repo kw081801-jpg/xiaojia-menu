@@ -196,12 +196,30 @@ textarea{resize:vertical;line-height:1.65}
       <label class="mini" style="margin:0;cursor:pointer;white-space:nowrap">
         上传<input id="fFile" type="file" accept="image/*" hidden />
       </label>
+      <button id="findBtn" class="mini" type="button" style="white-space:nowrap">🔍 找图</button>
     </div>
     <div id="imgPreview" style="margin-top:10px"></div>
     <div style="display:flex;gap:10px;margin-top:18px">
       <button id="saveItem" class="btn" style="flex:1">保存</button>
       <button class="btn danger" data-close>取消</button>
     </div>
+  </div>
+</div>
+
+<div id="finder" hidden style="position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;padding:16px">
+  <div style="position:absolute;inset:0;background:rgba(70,55,45,.36);backdrop-filter:blur(6px)" data-fclose></div>
+  <div style="position:relative;background:var(--card);border:1.5px dashed var(--line);border-radius:20px;
+    width:min(720px,100%);max-height:86vh;overflow:auto;padding:22px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px">
+      <h2 style="font-size:20px">找一张配图</h2>
+      <button class="mini" data-fclose>✕</button>
+    </div>
+    <div style="display:flex;gap:8px">
+      <input id="fq" type="text" placeholder="英文关键词更好找，比如 tomato egg" style="flex:1" />
+      <button id="fSearch" class="btn" style="padding:10px 16px">搜索</button>
+    </div>
+    <p class="hint" id="fTip">来源：Pexels（配 key 时）→ Openverse → Wikimedia，都是可免费使用的图库。</p>
+    <div id="fResults" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px"></div>
   </div>
 </div>
 
@@ -336,6 +354,52 @@ textarea{resize:vertical;line-height:1.65}
     $("#imgPreview").innerHTML = v ? '<img src="' + esc(v) + '" style="max-width:100%;border-radius:12px" />' : "";
   }
   $("#fImg").addEventListener("input", preview);
+
+  // ---- 找图 ----
+  function openFinder() {
+    $("#fq").value = $("#fEn").value.trim() || $("#fName").value.trim() || "";
+    $("#fResults").innerHTML = "";
+    $("#finder").hidden = false;
+    if ($("#fq").value) runSearch();
+  }
+  function closeFinder() { $("#finder").hidden = true; }
+  document.querySelectorAll("[data-fclose]").forEach(function (b) { b.addEventListener("click", closeFinder); });
+  $("#findBtn").addEventListener("click", openFinder);
+  $("#fSearch").addEventListener("click", runSearch);
+  $("#fq").addEventListener("keydown", function (e) { if (e.key === "Enter") runSearch(); });
+
+  function runSearch() {
+    var q = $("#fq").value.trim();
+    if (!q) return;
+    $("#fResults").innerHTML = '<div class="hint">正在找…</div>';
+    api("api/find-image?q=" + encodeURIComponent(q) + "&name=" + encodeURIComponent($("#fName").value.trim())).then(function (j) {
+      var list = j.results || [];
+      if (!list.length) { $("#fResults").innerHTML = '<div class="hint">没找到，换个英文关键词试试</div>'; return; }
+      $("#fResults").innerHTML = list.map(function (r, i) {
+        return '<figure style="margin:0;cursor:pointer" data-pick="' + i + '">' +
+          '<img src="api/thumb?u=' + encodeURIComponent(r.url) + '" alt="" loading="lazy" style="width:100%;height:110px;object-fit:cover;border-radius:10px;background:var(--soft)" />' +
+          '<figcaption style="font-size:11px;color:var(--dim);margin-top:4px;line-height:1.5">' +
+          esc(r.source) + (r.license ? " · " + esc(r.license) : "") + "</figcaption></figure>";
+      }).join("");
+      $("#fResults")._data = list;
+    }).catch(function () { $("#fResults").innerHTML = '<div class="hint">搜索失败</div>'; });
+  }
+  $("#fResults").addEventListener("click", function (e) {
+    var f = e.target.closest("[data-pick]");
+    if (!f) return;
+    var r = $("#fResults")._data[+f.dataset.pick];
+    if (!r) return;
+    $("#fTip").textContent = "正在下载…";
+    api("api/fetch-image", { method: "POST", body: { url: r.url, name: $("#fName").value || "dish" } })
+      .then(function (j) {
+        $("#fImg").value = j.path;
+        preview();
+        closeFinder();
+        $("#fTip").textContent = "来源：Pexels（配 key 时）→ Openverse → Wikimedia，都是可免费使用的图库。";
+        toast("图找到了");
+      })
+      .catch(function () { $("#fTip").textContent = "下载失败，换一张试试"; });
+  });
 
   $("#fFile").addEventListener("change", function () {
     var f = this.files && this.files[0];

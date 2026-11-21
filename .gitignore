@@ -4,6 +4,7 @@ Thumbs.db
 _*
 !/.nojekyll
 xiaojia-menu-qr.png
-data.db
+data.json
+data.json.tmp
 images/uploads/
 *.db-journal

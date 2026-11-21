@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#fdf7ee" />
+<title>管理台 · 小家菜单</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23fdf7ee'/%3E%3Cg fill='none' stroke='%237fb8ae' stroke-width='1.8' stroke-linecap='round'%3E%3Cpath d='M6 15h20'/%3E%3Cpath d='M9 9.8c0-1 .8-1.4.8-2.4M16 9.8c0-1 .8-1.4.8-2.4M23 9.8c0-1 .8-1.4.8-2.4'/%3E%3C/g%3E%3C/svg%3E" />
+<style>
+:root{
+  --bg:#fdf7ee; --card:#fffdf9; --ink:#4b4139; --dim:#8d8073;
+  --line:rgba(150,125,100,.18); --accent:#7fb8ae; --accent-2:#6f9e95; --soft:#eef7f4;
+  --serif:"Songti SC","STSong","Source Han Serif SC",Georgia,serif;
+  --sans:"PingFang SC","HarmonyOS Sans SC","Microsoft YaHei",system-ui,sans-serif;
+}
+@font-face{font-family:'Cormorant Garamond';font-style:normal;font-weight:300 700;font-display:swap;src:url('fonts/cormorant-var.woff2') format('woff2')}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+  -webkit-tap-highlight-color:transparent;
+  background-image:radial-gradient(circle at 1px 1px, rgba(150,125,100,.13) 1px, transparent 0);
+  background-size:22px 22px}
+h1,h2,h3{font-family:var(--serif);font-weight:600;margin:0}
+a{color:var(--accent-2)}
+.wrap{max-width:980px;margin:0 auto;padding:22px clamp(14px,4vw,32px) 60px}
+.top{display:flex;align-items:center;gap:12px;margin-bottom:6px}
+.mark{width:42px;height:42px;border:1.5px dashed var(--accent);border-radius:50%;display:flex;
+  align-items:center;justify-content:center;color:var(--accent-2)}
+.brand h1{font-size:24px;letter-spacing:.03em}
+.brand p{margin:3px 0 0;color:var(--dim);font-size:12px;letter-spacing:.14em}
+.top-right{margin-left:auto;display:flex;gap:8px;align-items:center}
+.ghost{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;
+  padding:8px 14px;font:inherit;font-size:13px;cursor:pointer}
+.ghost:hover{border-color:var(--accent);color:var(--accent-2)}
+.tabs{display:flex;gap:6px;margin:18px 0 16px;border-bottom:1px dashed var(--line);padding-bottom:12px;flex-wrap:wrap}
+.tab{border:1.5px dashed transparent;background:transparent;color:var(--dim);font:inherit;font-size:14px;
+  padding:8px 16px;border-radius:999px;cursor:pointer;letter-spacing:.04em}
+.tab.on{color:var(--accent-2);border-color:var(--accent);background:var(--card)}
+.panel{display:none}
+.panel.on{display:block}
+.card{background:var(--card);border:1.5px dashed var(--line);border-radius:18px;padding:16px 18px;margin-bottom:14px}
+.login{max-width:360px;margin:12vh auto}
+.login .card{padding:26px 24px}
+.login h2{font-size:22px;margin-bottom:6px}
+.login p{color:var(--dim);font-size:13px;margin:0 0 16px}
+label{display:block;font-size:12px;color:var(--dim);letter-spacing:.1em;margin:12px 0 5px}
+input[type=text],input[type=password],input[type=number],textarea,select{
+  width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:11px;background:#fff;
+  color:var(--ink);font:inherit;font-size:14px;outline:none}
+input:focus,textarea:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(127,184,174,.18)}
+textarea{resize:vertical;line-height:1.65}
+.btn{display:inline-block;border:1px solid var(--accent);background:var(--accent);color:#fff;
+  border-radius:12px;padding:11px 18px;font:inherit;font-size:14px;cursor:pointer;letter-spacing:.06em}
+.btn:hover{background:#6faa9f;border-color:#6faa9f}
+.btn.line{background:transparent;color:var(--accent-2)}
+.btn.danger{background:transparent;border-color:rgba(200,90,80,.4);color:#b9554b}
+.btn:disabled{opacity:.6;cursor:default}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+@media (max-width:560px){.row,.row3{grid-template-columns:1fr}}
+.item{display:flex;gap:12px;align-items:center}
+.item img{width:64px;height:48px;object-fit:cover;border-radius:8px;flex:0 0 auto;background:var(--soft)}
+.item .meta{flex:1;min-width:0}
+.item .meta b{font-size:15px;font-weight:600}
+.item .meta small{display:block;color:var(--dim);font-size:12px;margin-top:3px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item .ops{display:flex;gap:6px;flex:0 0 auto}
+.mini{border:1px solid var(--line);background:#fff;border-radius:9px;padding:6px 10px;
+  font:inherit;font-size:12px;color:var(--ink);cursor:pointer}
+.mini:hover{border-color:var(--accent);color:var(--accent-2)}
+.order{border-left:3px solid var(--accent);padding-left:14px}
+.order.new{border-left-color:#e0a24a}
+.order h3{font-size:16px;margin-bottom:4px}
+.order p{margin:0;color:var(--dim);font-size:13px;line-height:1.7}
+.order .who{color:var(--accent-2);font-size:13px;margin-left:8px}
+.order .ops{margin-top:8px;display:flex;gap:8px}
+.empty{color:var(--dim);text-align:center;padding:36px 0;font-size:14px}
+.hint{color:var(--dim);font-size:12px;line-height:1.8;margin-top:10px}
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:rgba(40,36,32,.92);
+  color:#fff;padding:10px 20px;border-radius:999px;font-size:13px;opacity:0;pointer-events:none;
+  transition:opacity .25s}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="mark" aria-hidden="true">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+        <path d="M4 11h16"/><path d="M6 11a6 6 0 0 0 12 0"/><path d="M9.5 20h5"/><path d="M12 17.5V20"/>
+      </svg>
+    </div>
+    <div class="brand">
+      <h1>小家菜单 · 管理台</h1>
+      <p id="whoami">正在检查登录状态…</p>
+    </div>
+    <div class="top-right">
+      <a href="index.html" class="ghost">看前台</a>
+      <button id="logout" class="ghost" hidden>退出</button>
+    </div>
+  </div>
+
+  <!-- 登录 -->
+  <div id="loginView" class="login" hidden>
+    <div class="card">
+      <h2>管理员登录</h2>
+      <p>只有你能改菜谱、看订单</p>
+      <label>密码</label>
+      <input id="pw" type="password" placeholder="默认 xiaojia" autocomplete="current-password" />
+      <div style="height:14px"></div>
+      <button id="doLogin" class="btn" style="width:100%">登录</button>
+      <div class="hint">密码在服务器环境变量 <code>XJ_ADMIN_PASSWORD</code> 里改，默认 <code>xiaojia</code>。</div>
+    </div>
+  </div>
+
+  <!-- 主界面 -->
+  <div id="mainView" hidden>
+    <div class="tabs">
+      <button class="tab on" data-tab="menu">菜谱</button>
+      <button class="tab" data-tab="orders">订单 <span id="badgeNew"></span></button>
+      <button class="tab" data-tab="settings">页面设置</button>
+    </div>
+
+    <section class="panel on" id="panel-menu">
+      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+        <button id="addBtn" class="btn">＋ 新增菜</button>
+        <button id="seedBtn" class="btn line">从 menu-data.js 导入初始菜单</button>
+        <span class="hint" style="margin:0;align-self:center" id="menuCount"></span>
+      </div>
+      <div id="menuList"></div>
+    </section>
+
+    <section class="panel" id="panel-orders">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <span class="hint" style="margin:0">用户提交的点菜会出现在这里</span>
+        <button id="refreshOrders" class="mini">刷新</button>
+      </div>
+      <div id="orderList"></div>
+    </section>
+
+    <section class="panel" id="panel-settings">
+      <div class="card">
+        <div class="row">
+          <div><label>站名</label><input id="sTitle" type="text" /></div>
+          <div><label>副标题</label><input id="sSubtitle" type="text" /></div>
+        </div>
+        <div class="row">
+          <div><label>封面小字（eyebrow）</label><input id="sEyebrow" type="text" /></div>
+          <div><label>封面问句</label><input id="sCoverSub" type="text" /></div>
+        </div>
+        <div class="row">
+          <div><label>进入按钮文案</label><input id="sEnter" type="text" /></div>
+          <div><label>品牌字（封面印章下方的字）</label><input id="sBrand" type="text" /></div>
+        </div>
+        <div style="height:16px"></div>
+        <button id="saveSettings" class="btn">保存</button>
+      </div>
+    </section>
+  </div>
+</div>
+
+<!-- 编辑菜谱 -->
+<div id="editor" hidden style="position:fixed;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;padding:16px">
+  <div style="position:absolute;inset:0;background:rgba(70,55,45,.34);backdrop-filter:blur(6px)" data-close></div>
+  <div style="position:relative;background:var(--card);border:1.5px dashed var(--line);border-radius:20px;
+    width:min(620px,100%);max-height:88vh;overflow:auto;padding:24px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+      <h2 id="edTitle" style="font-size:21px">新增菜谱</h2>
+      <button class="mini" data-close>✕</button>
+    </div>
+    <div class="row">
+      <div><label>菜名 *</label><input id="fName" type="text" /></div>
+      <div><label>英文名</label><input id="fEn" type="text" /></div>
+    </div>
+    <div class="row3">
+      <div><label>分类</label><select id="fCat"></select></div>
+      <div><label>口味</label><input id="fFlavor" type="text" placeholder="酸甜 · 下饭" /></div>
+      <div><label>角标</label><input id="fTag" type="text" placeholder="招牌 / 快手" /></div>
+    </div>
+    <div class="row3">
+      <div><label>耗时</label><input id="fTime" type="text" placeholder="20 分钟" /></div>
+      <div><label>难度</label><input id="fLevel" type="text" placeholder="新手" /></div>
+      <div><label>份量</label><input id="fServe" type="text" placeholder="2 人份" /></div>
+    </div>
+    <label>一句话介绍</label>
+    <input id="fIntro" type="text" />
+    <label>食材（一行一个，或用逗号分隔）</label>
+    <textarea id="fIng" rows="3"></textarea>
+    <label>做法（一行一步）</label>
+    <textarea id="fSteps" rows="4"></textarea>
+    <label>小贴士</label>
+    <input id="fTips" type="text" />
+    <label>配图</label>
+    <div style="display:flex;gap:8px;align-items:center">
+      <input id="fImg" type="text" placeholder="images/xxx.webp" />
+      <label class="mini" style="margin:0;cursor:pointer;white-space:nowrap">
+        上传<input id="fFile" type="file" accept="image/*" hidden />
+      </label>
+    </div>
+    <div id="imgPreview" style="margin-top:10px"></div>
+    <div style="display:flex;gap:10px;margin-top:18px">
+      <button id="saveItem" class="btn" style="flex:1">保存</button>
+      <button class="btn danger" data-close>取消</button>
+    </div>
+  </div>
+</div>
+
+<script src="menu-data.js"></script>
+<script>
+(function () {
+  "use strict";
+  var $ = function (s) { return document.querySelector(s); };
+  var ITEMS = [], SETTINGS = {}, EDITING = null, ONLINE = false;
+
+  function toast(m) {
+    var t = $("#toast");
+    if (!t) { t = document.createElement("div"); t.id = "toast"; t.className = "toast"; document.body.appendChild(t); }
+    t.textContent = m; t.classList.add("show");
+    clearTimeout(t._t); t._t = setTimeout(function () { t.classList.remove("show"); }, 1600);
+  }
+  function api(path, opts) {
+    opts = opts || {};
+    opts.credentials = "same-origin";
+    if (opts.body && typeof opts.body !== "string") {
+      opts.headers = { "Content-Type": "application/json" };
+      opts.body = JSON.stringify(opts.body);
+    }
+    return fetch(path, opts).then(function (r) {
+      if (r.status === 401) { showLogin(); throw new Error("401"); }
+      return r.json();
+    });
+  }
+  function esc(v) {
+    return String(v == null ? "" : v).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  function showLogin() { $("#loginView").hidden = false; $("#mainView").hidden = true; $("#logout").hidden = true; $("#whoami").textContent = "未登录"; }
+  function showMain() { $("#loginView").hidden = true; $("#mainView").hidden = false; $("#logout").hidden = false; $("#whoami").textContent = "已登录"; }
+
+  $("#doLogin").addEventListener("click", function () {
+    api("api/login", { method: "POST", body: { password: $("#pw").value } })
+      .then(function () { showMain(); loadAll(); })
+      .catch(function () { toast("密码不对"); });
+  });
+  $("#pw").addEventListener("keydown", function (e) { if (e.key === "Enter") $("#doLogin").click(); });
+  $("#logout").addEventListener("click", function () {
+    api("api/logout", { method: "POST" }).then(showLogin);
+  });
+
+  document.querySelectorAll(".tab").forEach(function (b) {
+    b.addEventListener("click", function () {
+      document.querySelectorAll(".tab").forEach(function (x) { x.classList.remove("on"); });
+      b.classList.add("on");
+      document.querySelectorAll(".panel").forEach(function (p) { p.classList.remove("on"); });
+      $("#panel-" + b.dataset.tab).classList.add("on");
+      if (b.dataset.tab === "orders") loadOrders();
+    });
+  });
+
+  function loadAll() {
+    api("api/menu").then(function (j) {
+      SETTINGS = j.settings || {};
+      ITEMS = j.items || [];
+      renderMenu(); fillSettings(); fillCats();
+    });
+    loadOrders();
+  }
+
+  function catLabel(key) {
+    var cats = (SETTINGS.categories || window.MENU_SETTINGS.categories || []);
+    for (var i = 0; i < cats.length; i++) if (cats[i].key === key) return cats[i].label;
+    return key || "";
+  }
+
+  function renderMenu() {
+    $("#menuCount").textContent = "共 " + ITEMS.length + " 道";
+    if (!ITEMS.length) {
+      $("#menuList").innerHTML = '<div class="card empty">还没有菜。点「从 menu-data.js 导入」把现有的 25 道拉进来。</div>';
+      return;
+    }
+    $("#menuList").innerHTML = ITEMS.map(function (d) {
+      return '<div class="card item">' +
+        (d.img ? '<img src="' + esc(d.img) + '" alt="" loading="lazy" />' : '<div style="width:64px"></div>') +
+        '<div class="meta"><b>' + esc(d.name) + '</b>' +
+        '<small>' + esc(catLabel(d.cat)) + ' · ' + esc(d.flavor || "") + ' · ' + esc(d.time || "") + '</small></div>' +
+        '<div class="ops"><button class="mini" data-edit="' + esc(d.id) + '">编辑</button>' +
+        '<button class="mini" data-del="' + esc(d.id) + '">删除</button></div></div>';
+    }).join("");
+  }
+
+  $("#menuList").addEventListener("click", function (e) {
+    var ed = e.target.closest("[data-edit]");
+    if (ed) return openEditor(ITEMS.filter(function (x) { return x.id === ed.dataset.edit; })[0]);
+    var del = e.target.closest("[data-del]");
+    if (del) {
+      if (!confirm("删掉这道菜？")) return;
+      api("api/items/" + encodeURIComponent(del.dataset.del), { method: "DELETE" }).then(function () {
+        toast("删了"); loadAll();
+      });
+    }
+  });
+
+  function fillCats() {
+    var cats = (SETTINGS.categories || window.MENU_SETTINGS.categories || []);
+    $("#fCat").innerHTML = cats.map(function (c) {
+      return '<option value="' + esc(c.key) + '">' + esc(c.label) + "</option>";
+    }).join("");
+  }
+
+  function openEditor(d) {
+    EDITING = d || null;
+    $("#edTitle").textContent = d ? "编辑 · " + d.name : "新增菜谱";
+    $("#fName").value = d ? d.name || "" : "";
+    $("#fEn").value = d ? d.en || "" : "";
+    $("#fFlavor").value = d ? d.flavor || "" : "";
+    $("#fTag").value = d ? d.tag || "" : "";
+    $("#fTime").value = d ? d.time || "" : "";
+    $("#fLevel").value = d ? d.level || "" : "";
+    $("#fServe").value = d ? d.serve || "" : "";
+    $("#fIntro").value = d ? d.intro || "" : "";
+    $("#fIng").value = d ? (d.ingredients || []).join("\n") : "";
+    $("#fSteps").value = d ? (d.steps || []).join("\n") : "";
+    $("#fTips").value = d ? d.tips || "" : "";
+    $("#fImg").value = d ? d.img || "" : "";
+    if (d && d.cat) $("#fCat").value = d.cat;
+    preview();
+    $("#editor").hidden = false;
+  }
+  function closeEditor() { $("#editor").hidden = true; EDITING = null; }
+  document.querySelectorAll("#editor [data-close]").forEach(function (b) { b.addEventListener("click", closeEditor); });
+
+  function preview() {
+    var v = $("#fImg").value.trim();
+    $("#imgPreview").innerHTML = v ? '<img src="' + esc(v) + '" style="max-width:100%;border-radius:12px" />' : "";
+  }
+  $("#fImg").addEventListener("input", preview);
+
+  $("#fFile").addEventListener("change", function () {
+    var f = this.files && this.files[0];
+    if (!f) return;
+    var r = new FileReader();
+    r.onload = function () {
+      api("api/upload", { method: "POST", body: { name: $("#fName").value || "dish", data: r.result } })
+        .then(function (j) { $("#fImg").value = j.path; preview(); toast("图传好了"); })
+        .catch(function () { toast("上传失败"); });
+    };
+    r.readAsDataURL(f);
+  });
+
+  $("#saveItem").addEventListener("click", function () {
+    var name = $("#fName").value.trim();
+    if (!name) return toast("菜名不能空");
+    var item = {
+      id: EDITING ? EDITING.id : "",
+      name: name,
+      en: $("#fEn").value.trim(),
+      cat: $("#fCat").value,
+      flavor: $("#fFlavor").value.trim(),
+      tag: $("#fTag").value.trim(),
+      time: $("#fTime").value.trim(),
+      level: $("#fLevel").value.trim(),
+      serve: $("#fServe").value.trim(),
+      intro: $("#fIntro").value.trim(),
+      ingredients: $("#fIng").value.split(/\n|,/).map(function (s) { return s.trim(); }).filter(Boolean),
+      steps: $("#fSteps").value.split(/\n/).map(function (s) { return s.trim(); }).filter(Boolean),
+      tips: $("#fTips").value.trim(),
+      img: $("#fImg").value.trim()
+    };
+    api("api/items", { method: "POST", body: { item: item } }).then(function () {
+      toast("保存好了"); closeEditor(); loadAll();
+    });
+  });
+
+  $("#addBtn").addEventListener("click", function () { openEditor(null); });
+
+  $("#seedBtn").addEventListener("click", function () {
+    if (!window.MENU_ITEMS || !window.MENU_ITEMS.length) return toast("menu-data.js 里没读到");
+    if (!confirm("会用 menu-data.js 覆盖数据库里现有的 " + ITEMS.length + " 道菜，确定？")) return;
+    api("api/seed", { method: "POST", body: { settings: window.MENU_SETTINGS, items: window.MENU_ITEMS } })
+      .then(function () { toast("导入了 " + window.MENU_ITEMS.length + " 道"); loadAll(); });
+  });
+
+  function fillSettings() {
+    $("#sTitle").value = SETTINGS.title || "";
+    $("#sSubtitle").value = SETTINGS.subtitle || "";
+    $("#sEyebrow").value = SETTINGS.eyebrow || "";
+    $("#sCoverSub").value = SETTINGS.coverSub || "";
+    $("#sEnter").value = SETTINGS.enterLabel || "";
+    $("#sBrand").value = SETTINGS.brand || "";
+  }
+  $("#saveSettings").addEventListener("click", function () {
+    SETTINGS.title = $("#sTitle").value;
+    SETTINGS.subtitle = $("#sSubtitle").value;
+    SETTINGS.eyebrow = $("#sEyebrow").value;
+    SETTINGS.coverSub = $("#sCoverSub").value;
+    SETTINGS.enterLabel = $("#sEnter").value;
+    SETTINGS.brand = $("#sBrand").value;
+    api("api/settings", { method: "POST", body: { settings: SETTINGS } }).then(function () { toast("存好了"); });
+  });
+
+  function loadOrders() {
+    api("api/orders").then(function (j) {
+      var list = j.orders || [];
+      var nw = list.filter(function (o) { return o.status === "new"; }).length;
+      $("#badgeNew").textContent = nw ? "(" + nw + ")" : "";
+      $("#orderList").innerHTML = list.length ? list.map(function (o) {
+        return '<div class="card order ' + o.status + '">' +
+          '<h3>#' + o.id + ' · ' + o.items.map(function (i) { return esc(i.name); }).join("、") +
+          (o.who ? '<span class="who">' + esc(o.who) + " 点的</span>" : "") + "</h3>" +
+          '<p>' + esc(o.created) + (o.note ? " · " + esc(o.note) : "") + "</p>" +
+          '<div class="ops">' +
+          '<button class="mini" data-done="' + o.id + '">' + (o.status === "new" ? "标记已做" : "改回未做") + "</button>" +
+          '<button class="mini" data-odel="' + o.id + '">删除</button></div></div>';
+      }).join("") : '<div class="card empty">还没有人点菜</div>';
+    });
+  }
+  $("#refreshOrders").addEventListener("click", loadOrders);
+  $("#orderList").addEventListener("click", function (e) {
+    var b = e.target.closest("[data-done]");
+    if (b) {
+      var id = b.dataset.done;
+      var cur = b.textContent.indexOf("已做") >= 0 ? "new" : "done";
+      api("api/orders/" + id, { method: "PATCH", body: { status: cur } }).then(loadOrders);
+    }
+    var d = e.target.closest("[data-odel]");
+    if (d && confirm("删掉这条订单？")) {
+      api("api/orders/" + d.dataset.odel, { method: "DELETE" }).then(loadOrders);
+    }
+  });
+
+  api("api/session").then(function (j) {
+    if (j.ok) { showMain(); loadAll(); } else { showLogin(); }
+  }).catch(function () {
+    $("#whoami").textContent = "没有后端在跑（打开页面要用 python server.py）";
+    showLogin();
+  });
+})();
+</script>
+</body>
+</html>

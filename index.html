@@ -820,6 +820,57 @@ body{
 [data-theme="sumikko"] .sumikko-side,
 [data-theme="sumikko"] .sumikko-perch{width:auto !important;object-fit:contain}
 
+/* ---------- 分类图标 / 点菜 ---------- */
+.ic-sprite{position:absolute;width:0;height:0;overflow:hidden}
+.cat-glyph{width:20px;height:20px;flex:0 0 auto;color:var(--accent-2);opacity:.95;margin-left:-1px;
+  fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;
+  transition:transform .2s ease}
+.group-head:hover .cat-glyph{transform:translateY(-1px)}
+[data-theme="sumikko"] .cat-glyph{color:#6f9e95}
+[data-theme="sumikko"] .group-title::after{content:none}
+
+.cart-bar{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:45;display:flex;align-items:center;
+  gap:14px;padding:9px 10px 9px 18px;border-radius:999px;background-color:var(--modal-bg);
+  border:1px solid var(--line-strong);box-shadow:var(--shadow);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+.cart-bar[hidden]{display:none}
+.cart-count{font-size:13px;color:var(--ink-dim);letter-spacing:.04em}
+.cart-count b{color:var(--accent-2);font-size:15px;margin:0 2px}
+.cart-btn{border:0;border-radius:999px;padding:9px 16px;background-color:var(--accent);color:var(--chip-ink);
+  font:inherit;font-size:13px;cursor:pointer;letter-spacing:.04em}
+.cart-card{width:min(440px,100%);max-height:86vh;overflow:auto}
+.cart-inner{padding:26px 24px 22px}
+.cart-title{font-family:var(--serif);font-size:25px;margin:0;color:var(--accent-2);letter-spacing:.04em}
+.cart-sub{color:var(--ink-dim);font-size:13px;margin:7px 0 16px;line-height:1.7}
+.cart-list{list-style:none;margin:0 0 14px;padding:0;max-height:34vh;overflow:auto}
+.cart-list li{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:11px 2px;border-bottom:1px dashed var(--line);font-size:15px}
+.cart-list li small{color:var(--ink-dim);font-size:12px;margin-left:10px}
+.cart-list button{border:0;background:transparent;color:var(--ink-dim);cursor:pointer;font-size:14px;padding:4px 6px}
+.cart-list button:hover{color:var(--accent-2)}
+.cart-empty{justify-content:center!important;color:var(--ink-dim);border:0!important;padding:26px 0!important}
+.cart-input{width:100%;box-sizing:border-box;margin-bottom:9px;padding:11px 14px;border-radius:12px;
+  border:1px solid var(--line);background-color:var(--accent-softer);color:var(--ink);
+  font:inherit;font-size:14px;outline:none}
+.cart-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.cart-note{resize:vertical;line-height:1.6}
+.cart-submit{width:100%;padding:13px;border-radius:12px;border:1px solid var(--accent);
+  background-color:var(--accent);color:var(--chip-ink);font:inherit;font-size:15px;cursor:pointer;
+  letter-spacing:.08em}
+.btn-order{display:block;width:100%;margin:20px 0 2px;padding:13px;border-radius:14px;
+  border:1.5px dashed var(--accent);background-color:var(--accent-soft);color:var(--ink);
+  font:inherit;font-size:15px;cursor:pointer;letter-spacing:.06em}
+.btn-order:hover{background-color:var(--accent);color:var(--chip-ink)}
+.toast{position:fixed;left:50%;bottom:84px;transform:translateX(-50%);z-index:60;
+  background:rgba(24,22,26,.92);color:#fff;padding:10px 20px;border-radius:999px;font-size:13px;
+  opacity:0;pointer-events:none;transition:opacity .25s ease}
+.toast.show{opacity:1}
+
+@media (max-width:600px){
+  .cart-bar{bottom:14px;gap:10px;padding:8px 8px 8px 15px}
+  .cat-glyph{width:18px;height:18px}
+}
+
 @media (prefers-reduced-motion:reduce){
   .cover-bg{animation:none}
   .cover-inner,.cover-eyebrow,.cover-divider,.cover-sub,.cover-enter{animation:none}
@@ -831,6 +882,33 @@ body{
   </style>
 </head>
 <body>
+<svg class="ic-sprite" width="0" height="0" aria-hidden="true" focusable="false" fill="none"
+  stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+  <symbol id="ic-wok" viewBox="0 0 24 24">
+    <path d="M3.5 11.5h17"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0"/>
+    <path d="M20.6 10.6l2.1-1.5"/>
+    <path d="M9 7.4c0-1 .8-1.5.8-2.5M13.2 7.4c0-1 .8-1.5.8-2.5"/>
+  </symbol>
+  <symbol id="ic-pot" viewBox="0 0 24 24">
+    <path d="M4 10h16"/><path d="M5.5 10v3.6A4.4 4.4 0 0 0 9.9 18h4.2a4.4 4.4 0 0 0 4.4-4.4V10"/>
+    <path d="M9 10V8.2a3 3 0 0 1 6 0V10"/><path d="M12 5.2V3.4"/>
+  </symbol>
+  <symbol id="ic-bowl" viewBox="0 0 24 24">
+    <path d="M3.6 11h16.8"/><path d="M5.2 11c0 4.4 3 7.8 6.8 7.8s6.8-3.4 6.8-7.8"/>
+    <path d="M8.2 11c0-2.1 1.7-3.7 3.8-3.7s3.8 1.6 3.8 3.7"/>
+    <path d="M13.4 4.2l3 4"/>
+  </symbol>
+  <symbol id="ic-cake" viewBox="0 0 24 24">
+    <path d="M4.4 13.6h15.2"/><path d="M5.6 13.6v5h12.8v-5"/>
+    <path d="M5.6 13.6c0-4 3-7.1 6.4-7.1s6.4 3.1 6.4 7.1"/>
+    <path d="M12 6.5V4.6"/><circle cx="12" cy="3.7" r="1"/>
+  </symbol>
+  <symbol id="ic-cup" viewBox="0 0 24 24">
+    <path d="M6 9h10v6a4 4 0 0 1-4 4h-2a4 4 0 0 1-4-4z"/>
+    <path d="M16 10.6h1.9a2.2 2.2 0 0 1 0 4.4H16"/>
+    <path d="M9.2 6.2c0-.9.8-1.3.8-2.2M12.8 6.2c0-.9.8-1.3.8-2.2"/>
+  </symbol>
+</svg>
 
 
   <!-- 开场封面 -->
@@ -917,6 +995,29 @@ body{
   <img class="sumikko-side left" src="images/friends/cat.png" alt="" />
   <img class="sumikko-side right" src="images/friends/katsu.png" alt="" />
 
+  <div id="cartBar" class="cart-bar" hidden>
+    <span class="cart-count">已选 <b>0</b> 道</span>
+    <button id="cartOpen" class="cart-btn">看看今晚菜单</button>
+  </div>
+
+  <div id="cartModal" class="modal" hidden>
+    <div class="modal-backdrop" data-closecart></div>
+    <div class="modal-card cart-card" role="dialog" aria-modal="true" aria-label="今晚菜单">
+      <button class="modal-close" data-closecart aria-label="关闭">✕</button>
+      <div class="cart-inner">
+        <h2 class="cart-title">今晚菜单</h2>
+        <p class="cart-sub">选好了就发给我，我去买菜</p>
+        <ul class="cart-list" id="cartList"></ul>
+        <div class="cart-form">
+          <input id="cartWho" class="cart-input" placeholder="谁点的（可不填）" maxlength="20" />
+          <textarea id="cartNote" class="cart-input cart-note" rows="2" maxlength="200"
+            placeholder="备注：少辣 / 不要香菜 / 几点吃（可不填）"></textarea>
+          <button id="cartSubmit" class="cart-submit">提交点菜</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div id="detail" class="modal" hidden>
     <div class="modal-backdrop" data-close></div>
     <div class="modal-card" role="dialog" aria-modal="true" aria-label="菜品详情">
@@ -933,18 +1034,19 @@ body{
 
   var S = window.MENU_SETTINGS;
   var D = window.MENU_ITEMS;
+  var API_MENU = false;
   var $ = function (s, r) { return (r || document).querySelector(s); };
   var content = $("#content");
   var countEl = $("#count");
 
   // ---------- 数据缺失兜底 ----------
-  if (!S || !Array.isArray(D) || !D.length) {
+  function checkData() {
+    if (S && Array.isArray(D) && D.length) return true;
     content.innerHTML =
       '<div class="loaderr"><h1>菜单数据没读到</h1>' +
-      '<p>页面需要同目录下的 <code>menu-data.js</code>。请检查：</p>' +
-      '<p>1. 两个文件是否在同一个文件夹里；<br>2. 是否直接双击 index.html 打开；<br>3. 浏览器是否拦截了本地脚本。</p>' +
+      '<p>页面需要同目录下的 <code>menu-data.js</code>，或者一个在跑的后端。</p>' +
       '<p>当前地址：<code>' + location.href + "</code></p></div>";
-    return;
+    return false;
   }
 
   // ---------- 基础工具 ----------
@@ -954,14 +1056,26 @@ body{
     });
   }
 
-  var CATS = S.categories || [];
+  var CATS = [];
   var catMap = {};
-  CATS.forEach(function (c) { catMap[c.key] = c; });
+
+  function applyData() {
+    S = window.MENU_SETTINGS || {};
+    D = window.MENU_ITEMS || [];
+    CATS = S.categories || [];
+    catMap = {};
+    CATS.forEach(function (c) { catMap[c.key] = c; });
+  }
+  applyData();
+
+  function itemId(d) { return String(d.id || d.slug || d.name); }
 
   var state = {
     view: "all",
     query: "",
     sound: localStorage.getItem("xj_sound") !== "0",
+    cart: [],
+    online: false,
     random: { stage: "pick", filter: null, chosen: false, revealed: false, current: null, last: null }
   };
 
@@ -1170,6 +1284,7 @@ body{
         '<div class="group-head-main">' +
           '<span class="accent-dot" aria-hidden="true"></span>' +
           '<h2 class="group-title">' + esc(g.label) + "</h2>" +
+          (g.icon ? '<svg class="cat-glyph" aria-hidden="true"><use href="#ic-' + esc(g.icon) + '"></use></svg>' : "") +
           '<span class="group-chevron" aria-hidden="true">▼</span>' +
         "</div>" +
         (g.note ? '<span class="group-note">' + esc(g.note) + "</span>" : "");
@@ -1307,6 +1422,9 @@ body{
         "</div>" +
         (d.intro ? '<p class="detail-intro">' + esc(d.intro) + "</p>" : "") +
         (tags.length ? '<div class="detail-tags">' + tags.join("") + "</div>" : "") +
+        (state.online
+          ? '<button class="btn-order" data-order="' + esc(itemId(d)) + '">＋ 加入今晚菜单</button>'
+          : "") +
         (ing ? '<div class="detail-section-title">食材</div><ul class="ing-list">' + ing + "</ul>" : "") +
         (steps ? '<div class="detail-section-title">做法</div><ol class="steps">' + steps + "</ol>" : "") +
         (d.tips ? '<div class="detail-section-title">小贴士</div><div class="tips-box">' + esc(d.tips) + "</div>" : "") +
@@ -1480,6 +1598,120 @@ body{
     }, 120);
   });
 
+  // ---------- 今晚菜单（点菜） ----------
+  function toast(msg) {
+    var t = document.getElementById("toast");
+    if (!t) {
+      t = document.createElement("div");
+      t.id = "toast";
+      t.className = "toast";
+      document.body.appendChild(t);
+    }
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(t._timer);
+    t._timer = setTimeout(function () { t.classList.remove("show"); }, 1800);
+  }
+
+  function cartLoad() {
+    try {
+      var raw = JSON.parse(localStorage.getItem("xj_cart") || "[]");
+      state.cart = Array.isArray(raw) ? raw.filter(function (id) { return !!itemById(id); }) : [];
+    } catch (e) { state.cart = []; }
+  }
+  function cartSave() {
+    try { localStorage.setItem("xj_cart", JSON.stringify(state.cart)); } catch (e) {}
+  }
+  function itemById(id) {
+    for (var i = 0; i < D.length; i++) if (itemId(D[i]) === id) return D[i];
+    return null;
+  }
+  function syncCart() {
+    var bar = $("#cartBar");
+    if (!bar) return;
+    bar.hidden = !(state.online && state.cart.length);
+    var b = bar.querySelector("b");
+    if (b) b.textContent = state.cart.length;
+  }
+  function addToCart(id) {
+    if (!state.online) return;
+    if (state.cart.indexOf(id) >= 0) { toast("已经在今晚菜单里了"); return; }
+    state.cart.push(id);
+    cartSave();
+    syncCart();
+    toast("已加入今晚菜单");
+  }
+  function removeFromCart(id) {
+    state.cart = state.cart.filter(function (x) { return x !== id; });
+    cartSave();
+    syncCart();
+    renderCart();
+  }
+  function renderCart() {
+    var ul = $("#cartList");
+    if (!ul) return;
+    var items = state.cart.map(itemById).filter(Boolean);
+    ul.innerHTML = items.length
+      ? items.map(function (d) {
+          var c = catMap[d.cat];
+          return "<li><span>" + esc(d.name) +
+            (c ? "<small>" + esc(c.label) + "</small>" : "") +
+            '</span><button data-rm="' + esc(itemId(d)) + '" aria-label="移除">✕</button></li>';
+        }).join("")
+      : '<li class="cart-empty">还没选菜，回去点点看</li>';
+  }
+  function openCart() {
+    renderCart();
+    $("#cartModal").hidden = false;
+    document.body.style.overflow = "hidden";
+  }
+  function closeCart() {
+    $("#cartModal").hidden = true;
+    document.body.style.overflow = "";
+  }
+  function submitCart() {
+    if (!state.cart.length) { toast("先选两道菜"); return; }
+    var btn = $("#cartSubmit");
+    btn.disabled = true;
+    btn.textContent = "提交中…";
+    fetch("api/orders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        who: ($("#cartWho") || {}).value || "",
+        note: ($("#cartNote") || {}).value || "",
+        items: state.cart
+      })
+    }).then(function (r) {
+      if (!r.ok) throw new Error("bad");
+      return r.json();
+    }).then(function () {
+      state.cart = [];
+      cartSave();
+      syncCart();
+      closeCart();
+      btn.disabled = false;
+      btn.textContent = "提交点菜";
+      toast("点好了，等吃饭吧");
+    }).catch(function () {
+      btn.disabled = false;
+      btn.textContent = "提交失败，重试";
+    });
+  }
+
+  document.addEventListener("click", function (e) {
+    var add = e.target.closest("[data-order]");
+    if (add) { addToCart(add.dataset.order); return; }
+    var rm = e.target.closest("[data-rm]");
+    if (rm) { removeFromCart(rm.dataset.rm); return; }
+    if (e.target.closest("[data-closecart]")) { closeCart(); return; }
+    if (e.target.closest("#cartOpen")) { openCart(); return; }
+    if (e.target.closest("#cartSubmit")) { submitCart(); return; }
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && $("#cartModal") && !$("#cartModal").hidden) closeCart();
+  });
+
   // ---------- 封面 ----------
   function boot() {
     if (S.title) $("#siteTitle").textContent = S.title;
@@ -1503,10 +1735,28 @@ body{
     });
   }
 
+  function start() {
+    cartLoad();
+    fetch("api/menu", { cache: "no-store" })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .catch(function () { return null; })
+      .then(function (j) {
+        if (j && j.items && j.items.length) {
+          if (j.settings) window.MENU_SETTINGS = j.settings;
+          window.MENU_ITEMS = j.items;
+          state.online = true;
+        }
+        applyData();
+        if (!checkData()) return;
+        boot();
+        syncCart();
+      });
+  }
+
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", boot);
+    document.addEventListener("DOMContentLoaded", start);
   } else {
-    boot();
+    start();
   }
   window.addEventListener("load", syncTopbarHeight);
 })();

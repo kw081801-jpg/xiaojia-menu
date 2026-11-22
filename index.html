@@ -943,6 +943,14 @@ textarea.wish-input{resize:vertical;line-height:1.7}
 .card-titles{min-width:0}
 .card-name{overflow-wrap:anywhere}
 
+.order-state{position:fixed;left:50%;transform:translateX(-50%);bottom:78px;z-index:44;
+  padding:9px 18px;border-radius:999px;font-size:13px;color:var(--ink);
+  background-color:var(--modal-bg);border:1px solid var(--line);box-shadow:var(--shadow);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);max-width:88vw;text-align:center}
+.order-state[data-state="confirmed"]{border-color:var(--accent);color:var(--accent-2)}
+.order-state[data-state="rejected"]{border-color:rgba(200,90,80,.5);color:#b9554b}
+.order-state[hidden]{display:none}
+
 @media (prefers-reduced-motion:reduce){
   .cover-bg{animation:none}
   .cover-inner,.cover-eyebrow,.cover-divider,.cover-sub,.cover-enter{animation:none}
@@ -1777,6 +1785,45 @@ textarea.wish-input{resize:vertical;line-height:1.7}
     }, 120);
   });
 
+  // ---------- 订单状态 ----------
+  function orderBar() {
+    var el = document.getElementById("orderState");
+    if (!el) {
+      el = document.createElement("div");
+      el.id = "orderState";
+      el.className = "order-state";
+      el.hidden = true;
+      document.body.appendChild(el);
+    }
+    return el;
+  }
+
+  function checkOrder() {
+    var raw = null;
+    try { raw = JSON.parse(localStorage.getItem("xj_last_order") || "null"); } catch (e) { raw = null; }
+    if (!raw || !raw.id) return;
+    fetch("api/order/" + encodeURIComponent(raw.id), { cache: "no-store" })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) {
+        if (!j || !j.order) return;
+        var o = j.order, el = orderBar(), text = "";
+        if (o.status === "new") text = "已提交，等大厨确认…";
+        else if (o.status === "confirmed") text = "大厨已接单，等你来";
+        else if (o.status === "done") text = "已经做好啦";
+        else if (o.status === "rejected") text = "这次接不了：" + (o.reply || "换个时间吧");
+        if (!text) { el.hidden = true; return; }
+        el.textContent = text;
+        el.setAttribute("data-state", o.status);
+        el.hidden = false;
+      })
+      .catch(function () {});
+  }
+
+  setInterval(checkOrder, 30000);
+  document.addEventListener("visibilitychange", function () {
+    if (!document.hidden) checkOrder();
+  });
+
   // ---------- 来客确认 ----------
   function todayStr() {
     var d = new Date();
@@ -1910,14 +1957,18 @@ textarea.wish-input{resize:vertical;line-height:1.7}
     }).then(function (r) {
       if (!r.ok) throw new Error("bad");
       return r.json();
-    }).then(function () {
+    }).then(function (r) { return r.json(); }).then(function (res) {
       state.cart = [];
       cartSave();
       syncCart();
       closeCart();
       btn.disabled = false;
       btn.textContent = "提交点菜";
-      toast("点好了，等吃饭吧");
+      if (res && res.id) {
+        try { localStorage.setItem("xj_last_order", JSON.stringify({ id: res.id, at: Date.now() })); } catch (e) {}
+        checkOrder();
+      }
+      toast("点好了，等大厨确认");
     }).catch(function () {
       btn.disabled = false;
       btn.textContent = "提交失败，重试";
@@ -2001,6 +2052,7 @@ textarea.wish-input{resize:vertical;line-height:1.7}
         if (!checkData()) return;
         boot();
         syncCart();
+        checkOrder();
       });
   }
 

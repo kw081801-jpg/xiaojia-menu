@@ -457,6 +457,18 @@ class H(BaseHTTPRequestHandler):
             with LOCK:
                 d = load()
             return self.json({"wishes": list(reversed(d["wishes"]))})
+        if p.path.startswith("/api/order/"):
+            oid = urllib.parse.unquote(p.path.rsplit("/", 1)[-1])
+            with LOCK:
+                d = load()
+            for o in d["orders"]:
+                if str(o.get("id")) == oid:
+                    return self.json({"order": {
+                        "id": o.get("id"), "status": o.get("status", "new"),
+                        "reply": o.get("reply", ""),
+                        "items": o.get("items", []),
+                    }})
+            return self.json({"error": "not found"}, 404)
         if p.path == "/api/orders":
             if not self.need_admin():
                 return
@@ -531,7 +543,7 @@ class H(BaseHTTPRequestHandler):
                     "visit": str(b.get("visit", ""))[:10],
                     "who": str(b.get("who", ""))[:40],
                     "note": str(b.get("note", ""))[:200],
-                    "items": picked, "status": "new",
+                    "items": picked, "status": "new", "reply": "",
                 })
                 save(d)
                 return self.json({"ok": True, "id": d["orders"][-1]["id"]})
@@ -668,12 +680,15 @@ class H(BaseHTTPRequestHandler):
             if not self.need_admin():
                 return
             oid = urllib.parse.unquote(p.rsplit("/", 1)[-1])
-            status = str(self.body().get("status") or "new")[:10]
+            b = self.body()
+            status = str(b.get("status") or "new")[:12]
+            reply = str(b.get("reply", ""))[:200]
             with LOCK:
                 d = load()
                 for o in d["orders"]:
                     if str(o.get("id")) == oid:
                         o["status"] = status
+                        o["reply"] = reply
                 save(d)
             return self.json({"ok": True})
         return self.json({"error": "not found"}, 404)

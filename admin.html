@@ -627,13 +627,18 @@ textarea{resize:vertical;line-height:1.65}
       var nw = list.filter(function (o) { return o.status === "new"; }).length;
       $("#badgeNew").textContent = nw ? "(" + nw + ")" : "";
       $("#orderList").innerHTML = list.length ? list.map(function (o) {
+        var stateText = { new: "待确认", confirmed: "已接单", rejected: "已拒绝", done: "已完成" }[o.status] || o.status;
         return '<div class="card order ' + o.status + '">' +
+          '<span class="mini" style="float:right">' + stateText + "</span>" +
           '<h3>#' + o.id + ' · ' + o.items.map(function (i) { return esc(i.name); }).join("、") +
           (o.who ? '<span class="who">' + esc(o.who) + " 点的</span>" : "") +
           (o.visit ? '<span class="who">· ' + esc(o.visit) + " 来</span>" : "") + "</h3>" +
           '<p>' + esc(o.created) + (o.note ? " · " + esc(o.note) : "") + "</p>" +
+          (o.reply ? '<p style="color:#b9554b">附言：' + esc(o.reply) + "</p>" : "") +
           '<div class="ops">' +
-          '<button class="mini" data-done="' + o.id + '">' + (o.status === "new" ? "标记已做" : "改回未做") + "</button>" +
+          '<button class="mini" data-ok="' + o.id + '">接单</button>' +
+          '<button class="mini" data-no="' + o.id + '">拒单</button>' +
+          '<button class="mini" data-done="' + o.id + '">' + (o.status === "done" ? "改回未做" : "标记已做") + "</button>" +
           '<button class="mini" data-odel="' + o.id + '">删除</button></div></div>';
       }).join("") : '<div class="card empty">还没有人点菜</div>';
     });
@@ -645,6 +650,18 @@ textarea{resize:vertical;line-height:1.65}
       var id = b.dataset.done;
       var cur = b.textContent.indexOf("已做") >= 0 ? "new" : "done";
       api("api/orders/" + id, { method: "PATCH", body: { status: cur } }).then(loadOrders);
+    }
+    var ok = e.target.closest("[data-ok]");
+    if (ok) {
+      api("api/orders/" + ok.dataset.ok, { method: "PATCH", body: { status: "confirmed", reply: "" } }).then(loadOrders);
+      return;
+    }
+    var no = e.target.closest("[data-no]");
+    if (no) {
+      var reason = prompt("告诉他为什么接不了（缺什么材料 / 什么时间不行）", "今天没买到新鲜的，换一道？");
+      if (reason === null) return;
+      api("api/orders/" + no.dataset.no, { method: "PATCH", body: { status: "rejected", reply: reason } }).then(loadOrders);
+      return;
     }
     var d = e.target.closest("[data-odel]");
     if (d && confirm("删掉这条订单？")) {

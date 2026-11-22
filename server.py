@@ -636,7 +636,7 @@ class H(BaseHTTPRequestHandler):
         if p.startswith("/api/items/"):
             if not self.need_admin():
                 return
-            iid = p.rsplit("/", 1)[-1]
+            iid = urllib.parse.unquote(p.rsplit("/", 1)[-1])
             with LOCK:
                 d = load()
                 d["items"] = [i for i in d["items"] if i.get("id") != iid]
@@ -645,7 +645,7 @@ class H(BaseHTTPRequestHandler):
         if p.startswith("/api/wishes/"):
             if not self.need_admin():
                 return
-            wid = p.rsplit("/", 1)[-1]
+            wid = urllib.parse.unquote(p.rsplit("/", 1)[-1])
             with LOCK:
                 d = load()
                 d["wishes"] = [w for w in d["wishes"] if str(w.get("id")) != wid]
@@ -654,7 +654,7 @@ class H(BaseHTTPRequestHandler):
         if p.startswith("/api/orders/"):
             if not self.need_admin():
                 return
-            oid = p.rsplit("/", 1)[-1]
+            oid = urllib.parse.unquote(p.rsplit("/", 1)[-1])
             with LOCK:
                 d = load()
                 d["orders"] = [o for o in d["orders"] if str(o.get("id")) != oid]
@@ -667,7 +667,7 @@ class H(BaseHTTPRequestHandler):
         if p.startswith("/api/orders/"):
             if not self.need_admin():
                 return
-            oid = p.rsplit("/", 1)[-1]
+            oid = urllib.parse.unquote(p.rsplit("/", 1)[-1])
             status = str(self.body().get("status") or "new")[:10]
             with LOCK:
                 d = load()

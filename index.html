@@ -1807,12 +1807,19 @@ textarea.wish-input{resize:vertical;line-height:1.7}
       .then(function (j) {
         if (!j || !j.order) return;
         var o = j.order, el = orderBar(), text = "";
-        if (o.status === "new") text = "已提交，等大厨确认…";
-        else if (o.status === "confirmed") text = "大厨已接单，等你来";
+        if (o.status === "new") text = "等大厨确认…";
+        else if (o.status === "confirmed") text = "已接单，等你来";
         else if (o.status === "done") text = "已经做好啦";
-        else if (o.status === "rejected") text = "这次接不了：" + (o.reply || "换个时间吧");
+        else if (o.status === "rejected") text = "这次接不了";
         if (!text) { el.hidden = true; return; }
-        el.textContent = text;
+        el.textContent = "我的点菜：" + text + "（点一下看详情）";
+        el.onclick = function () {
+          var names = (o.items || []).map(function (x) { return x.name; }).join("、");
+          var stateMap = { new: "等待大厨确认", confirmed: "大厨已接单", done: "已经做好", rejected: "这次接不了" };
+          var msg = "点的菜：" + (names || "—") + "\n\n状态：" + (stateMap[o.status] || o.status);
+          if (o.status === "rejected" && o.reply) msg += "\n大厨留言：" + o.reply;
+          alert(msg);
+        };
         el.setAttribute("data-state", o.status);
         el.hidden = false;
       })

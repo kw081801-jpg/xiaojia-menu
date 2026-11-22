@@ -5,6 +5,8 @@ import android.app.AlertDialog;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.MotionEvent;
 import android.view.View;
 import android.webkit.CookieManager;
@@ -29,6 +31,9 @@ public class MainActivity extends android.app.Activity {
     private long lastLoad = 0;
     private float downY = 0;
     private boolean pulling = false;
+    private boolean menuShown = false;
+    private final Handler handler = new Handler(Looper.getMainLooper());
+    private Runnable pressTask = null;
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
@@ -70,26 +75,35 @@ public class MainActivity extends android.app.Activity {
         });
         web.setWebChromeClient(new WebChromeClient());
 
-        // 长按任意空白处 1 秒：刷新 / 进后台
-        web.setOnLongClickListener(new View.OnLongClickListener() {
-            @Override
-            public boolean onLongClick(View v) {
-                showMenu();
-                return true;
-            }
-        });
 
-        // 下拉到顶再往下拉 200px：刷新
+        // 下拉到顶再往下拉 200px：刷新；按住 1.6 秒：菜单
         web.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent e) {
-                switch (e.getAction()) {
+                switch (e.getActionMasked()) {
                     case MotionEvent.ACTION_DOWN:
                         downY = e.getY();
                         pulling = (web.getScrollY() == 0);
+                        menuShown = false;
+                        if (pressTask != null) handler.removeCallbacks(pressTask);
+                        pressTask = new Runnable() {
+                            @Override
+                            public void run() {
+                                menuShown = true;
+                                showMenu();
+                            }
+                        };
+                        handler.postDelayed(pressTask, 1600);
+                        break;
+                    case MotionEvent.ACTION_MOVE:
+                        if (Math.abs(e.getY() - downY) > 24 && pressTask != null) {
+                            handler.removeCallbacks(pressTask);
+                        }
                         break;
                     case MotionEvent.ACTION_UP:
-                        if (pulling && e.getY() - downY > 220) {
+                    case MotionEvent.ACTION_CANCEL:
+                        if (pressTask != null) handler.removeCallbacks(pressTask);
+                        if (!menuShown && pulling && e.getY() - downY > 220) {
                             web.reload();
                             Toast.makeText(MainActivity.this, "已刷新", Toast.LENGTH_SHORT).show();
                         }
@@ -170,17 +184,15 @@ public class MainActivity extends android.app.Activity {
     }
 
     private void showMenu() {
-        new AlertDialog.Builder(this)
-                .setTitle("小家菜单")
-                .setItems(new String[]{"刷新页面", "进入管理后台"}, (d, which) -> {
-                    if (which == 0) {
-                        web.reload();
-                    } else {
-                        web.loadUrl(ADMIN);
-                    }
-                })
-                .setNegativeButton("取消", null)
-                .show();
+        android.view.View v = getLayoutInflater().inflate(R.layout.dialog_menu, null);
+        AlertDialog dlg = new AlertDialog.Builder(this).setView(v).create();
+        if (dlg.getWindow() != null) {
+            dlg.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
+        }
+        v.findViewById(R.id.btnRefresh).setOnClickListener(x -> { web.reload(); dlg.dismiss(); });
+        v.findViewById(R.id.btnAdmin).setOnClickListener(x -> { web.loadUrl(ADMIN); dlg.dismiss(); });
+        v.findViewById(R.id.btnCancel).setOnClickListener(x -> dlg.dismiss());
+        dlg.show();
     }
 
     @Override

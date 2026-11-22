@@ -10,3 +10,8 @@ images/uploads/
 *.db-journal
 menu-qr.png
 xiaogpt/
+app-android/xiaojia.jks
+app-android/keystore.properties
+app-android/.gradle/
+app-android/build/
+app-android/app/build/

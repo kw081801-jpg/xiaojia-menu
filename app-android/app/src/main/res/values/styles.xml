@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Xiaojia" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:statusBarColor">#FDF7EE</item>
+        <item name="android:navigationBarColor">#FDF7EE</item>
+        <item name="android:windowBackground">#FDF7EE</item>
+    </style>
+</resources>

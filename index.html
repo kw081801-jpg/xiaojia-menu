@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN" data-theme="sumikko">
 <head>
   <meta charset="utf-8" />
@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#fdf7ee" id="themeColor" />
   <title>小家菜单 · 动态菜单</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230b0a0e'/%3E%3Cg fill='none' stroke='%23e2cfa6' stroke-width='1.6' stroke-linecap='round'%3E%3Cpath d='M6 14h20'/%3E%3Cpath d='M8 14a8 8 0 0 0 16 0'/%3E%3Cpath d='M13 25h6'/%3E%3Cpath d='M16 22v3'/%3E%3C/g%3E%3C/svg%3E" />
-  <meta name="description" content="小家菜单 · 按分类浏览家常菜、汤羹、主食、甜品与饮品，六套主题随时切换，默认「角落」奶油风。" />
+  <meta name="description" content="小家菜单 · 按分类浏览家常、招牌推荐、融合料理、嘶哈嘶哈、汤品、主食、甜品与饮品，六套主题随时切换，默认「角落」奶油风。" />
   <script>
     try {
       var t = localStorage.getItem("xj_theme");
@@ -364,7 +364,7 @@ body{
   display:flex;align-items:center;justify-content:center;
   background:radial-gradient(circle at 50% 40%,var(--accent-soft),transparent 70%)
 }
-.card-media.no-img span{
+.card-media.no-img span:not(.card-badge){
   font-family:var(--serif);font-size:56px;color:var(--accent-2);opacity:.5;font-weight:600
 }
 .card-badge{
@@ -799,6 +799,9 @@ body{
 }
 @media (max-width:600px){
   .tab{font-size:14px;letter-spacing:.06em;text-indent:.06em;padding:12px 7px 13px}
+  /* 分类变多后（8 类）窄屏压缩节点，尽量一屏放下，放不下时横向滑动 */
+  .catnode{padding:0 8px;min-width:38px}
+  .catlbl{font-size:10.5px;letter-spacing:0}
 }
 @media (max-width:480px){
   .topbar{padding-top:28px}
@@ -1696,7 +1699,10 @@ textarea.wish-input{resize:vertical;line-height:1.7}
     if (r.stage === "pick") {
       var rows = [];
       var row = [];
-      CATS.forEach(function (c, i) {
+      var drawable = CATS.filter(function (c) {
+        return visibleItems().some(function (d) { return d.cat === c.key; });
+      });
+      drawable.forEach(function (c, i) {
         row.push('<button class="chip" data-filter="' + esc(c.key) + '">' + esc(c.label) + "</button>");
         if (row.length === 3) { rows.push(row.join("")); row = []; }
       });

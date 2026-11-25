@@ -244,11 +244,11 @@ def llm_conf():
 
 PROMPT = (
     "你是家常菜谱助手。为菜品「%s」生成上架信息，只输出 JSON，不要解释。字段："
-    '{"en":"英文名","cat":"home|soup|staple|sweet|drink 里选一个",'
+    '{"en":"英文名","cat":"home|signature|fusion|spicy|soup|staple|sweet|drink 里选一个",'
     '"flavor":"两个词的口味，如 麻辣 · 烫口","time":"如 20 分钟","level":"新手|顺手|慢炖",'
     '"serve":"如 2 人份","intro":"一句让人想吃的话，只写口感和味道，不要写做法",'
     '"ingredients":["食材 用量"],"steps":["做法步骤"],"tips":"一句做菜提示"}'
-    "。cat 含义：home 家常菜、soup 汤羹、staple 主食、sweet 甜品、drink 饮品。"
+    "。cat 含义：home 家常小炒、signature 招牌推荐、fusion 融合料理、spicy 嘶哈嘶哈（辣菜）、soup 汤品、staple 主食、sweet 甜品、drink 饮品。"
     "intro 不超过 24 个字，绝对不能出现「先…再…」「分钟」「小火」这类做法描述。"
 )
 

@@ -1,4 +1,4 @@
-﻿*.log
+*.log
 .DS_Store
 Thumbs.db
 _*
@@ -15,3 +15,4 @@ app-android/keystore.properties
 app-android/.gradle/
 app-android/build/
 app-android/app/build/
+scripts/.cache/

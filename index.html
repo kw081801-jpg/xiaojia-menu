@@ -333,7 +333,7 @@ body{
   background-color:var(--accent);box-shadow:0 0 10px currentColor;color:var(--accent);opacity:.75
 }
 
-.cards{display:grid;gap:16px;grid-template-columns:1fr}
+.cards{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
 @media (min-width:760px){.cards{grid-template-columns:1fr 1fr}}
 @media (min-width:1080px){.cards{grid-template-columns:1fr 1fr 1fr}}
 .group-empty{
@@ -343,7 +343,21 @@ body{
 }
 
 /* ---------- 卡片 ---------- */
-.card{
+@media (max-width:640px){
+  .cards{gap:11px;grid-template-columns:repeat(2,minmax(0,1fr))}
+  .card-media{aspect-ratio:4/3}
+  .card-body{padding:10px 11px 11px}
+  .card-top{flex-direction:column;align-items:flex-start;gap:3px}
+  .card-name{font-size:15.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+  .card-en{display:none}
+  .card-flavor{font-size:10.5px;width:100%;max-width:100%;text-align:left;line-height:1.4;margin:0;
+    display:block;-webkit-line-clamp:none;overflow:visible}
+  .card-meta{font-size:11px;padding-top:8px}
+  .card-add{width:32px;height:32px;font-size:18px;right:8px;bottom:8px}
+  .card-badge{font-size:9.5px;padding:3px 9px;right:8px;top:8px}
+  .group-title{font-size:19px}
+  .card:hover{transform:none}
+}.card{
   position:relative;background-color:var(--card);
   border:1px solid var(--line);border-radius:var(--radius);
   cursor:pointer;transition:.24s ease;overflow:hidden
@@ -635,7 +649,20 @@ body{
 [data-theme="sumikko"] .group-note{border-style:dashed;background-color:#fffdf9}
 [data-theme="sumikko"] .accent-dot{width:10px;height:10px;background-color:var(--accent);
   box-shadow:0 0 0 4px rgba(127,184,174,.18);color:var(--accent)}
-[data-theme="sumikko"] .card{border-radius:22px;border:1.5px solid rgba(150,125,100,.14);
+@media (max-width:640px){
+  .cards{gap:11px;grid-template-columns:repeat(2,minmax(0,1fr))}
+  .card-media{aspect-ratio:4/3}
+  .card-body{padding:10px 11px 11px}
+  .card-top{display:block}
+  .card-name{font-size:16px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .card-en{font-size:10.5px;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .card-meta{font-size:10.5px;padding-top:8px}
+  .card-add{width:32px;height:32px;font-size:18px;right:8px;bottom:8px}
+  .card-badge{font-size:9.5px;padding:3px 9px;right:8px;top:8px}
+  .group-title{font-size:19px}
+  .card:hover{transform:none}
+}
+.card{border-radius:22px;border:1.5px solid rgba(150,125,100,.14);
   background-color:#fffdf9;box-shadow:0 10px 22px rgba(150,120,90,.1)}
 [data-theme="sumikko"] .card:hover{transform:translateY(-5px);border-color:rgba(127,184,174,.5);
   box-shadow:0 16px 30px rgba(150,120,90,.16)}
@@ -1021,6 +1048,14 @@ textarea.wish-input{resize:vertical;line-height:1.7}
 @media (max-width:640px){
   .cover-bg{background-image:url("images/sm/cover.webp");background-size:cover}
 }
+  @media (max-width:640px){
+    .card-top{flex-direction:column;align-items:stretch;gap:3px}
+    .card-titles{width:100%}
+    .card-flavor{max-width:100% !important;width:100% !important;text-align:left !important;
+      font-size:10.5px !important;line-height:1.45;margin:0}
+    .card-name{font-size:15.5px !important}
+    .card-meta{font-size:10.5px !important}
+  }
   </style>
 </head>
 <body>
@@ -1620,7 +1655,7 @@ textarea.wish-input{resize:vertical;line-height:1.7}
             '<h3 class="card-name">' + esc(d.name) + "</h3>" +
             '<p class="card-en">' + esc(d.en || "—") + "</p>" +
           "</div>" +
-          '<p class="card-flavor">' + esc(d.flavor || "") + "</p>" +
+
         "</div>" +
         '<div class="card-meta">' +
           "<span>" + esc(meta) + "</span>"

@@ -864,6 +864,10 @@ body{
   border-radius:26px 26px 0 0;
   animation:sheet-up .26s cubic-bezier(.2,.8,.2,1)}
 @keyframes sheet-up{from{transform:translateY(40px);opacity:.5}to{transform:translateY(0);opacity:1}}
+.order-note{margin:0 0 14px;padding:11px 14px;border-radius:14px;font-size:13.5px;line-height:1.7;
+  background:rgba(127,184,174,.16);border:1.5px dashed rgba(127,184,174,.55);color:var(--ink)}
+.order-note b{color:var(--accent-2);font-family:var(--serif)}
+.order-note .reply{display:block;margin-top:4px;color:#9c4438}
 .sheet-grip{display:block;width:44px;height:4px;border-radius:99px;background:rgba(47,79,74,.16);margin:-10px auto 14px}
 .cart-card{width:min(560px,100%);max-height:88vh;overflow:auto}
 .cart-inner{padding:26px 24px 22px}
@@ -1150,6 +1154,7 @@ textarea.wish-input{resize:vertical;line-height:1.7}
       <div class="cart-inner">
         <span class="sheet-grip" aria-hidden="true"></span>
         <h2 class="cart-title">今晚菜单</h2>
+        <div class="order-note" id="orderState" hidden></div>
         <p class="cart-sub">想吃的都点上</p>
         <div class="day-peek" id="dayPeek" hidden></div>
         <ul class="cart-list" id="cartList"></ul>
@@ -1877,7 +1882,13 @@ textarea.wish-input{resize:vertical;line-height:1.7}
         else if (o.status === "rejected") text = "这次接不了";
         if (!text) { el.hidden = true; return; }
         el.textContent = "我的点菜：" + text + "  ›";
-        el.onclick = function () { location.href = "order.html?id=" + encodeURIComponent(o.id); };
+        el.onclick = function () { openCart(); };
+        var box = $("#orderState");
+        if (box) {
+          box.innerHTML = "<b>#" + esc(String(o.id)) + " " + esc(text) + "</b>" +
+            (o.reply ? '<span class="reply">大厨留言：' + esc(o.reply) + "</span>" : "");
+          box.hidden = false;
+        }
         el.setAttribute("data-state", o.status);
         el.hidden = false;
       })

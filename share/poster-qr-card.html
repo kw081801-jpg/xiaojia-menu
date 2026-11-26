@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>笨笨狗餐厅 · 扫码卡片</title>
+<style>
+  @font-face{font-family:'ZCOOL KuaiLe';font-style:normal;font-weight:400;font-display:block;
+    src:url('../fonts/zcool-subset.woff2?v=8') format('woff2')}
+
+  :root{
+    --paper:#fdf7ee;
+    --mint:#7fb8ae;
+    --mint-deep:#4e8a80;
+    --mint-soft:#e6f2ee;
+    --ink:#2f4f4a;
+    --ink-soft:#6f8782;
+    --cream:#f7e6b4;
+    --round:'ZCOOL KuaiLe',system-ui,sans-serif;
+    --serif:'Noto Serif SC','Source Han Serif SC','STSong','SimSun',serif;
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{width:1080px;height:1080px;overflow:hidden}
+  body{
+    font-family:var(--serif);color:var(--ink);position:relative;
+    background:
+      radial-gradient(720px 560px at 8% 4%, #eaf5f0 0%, rgba(234,245,240,0) 62%),
+      radial-gradient(680px 520px at 96% 96%, #fbf0d6 0%, rgba(251,240,214,0) 60%),
+      var(--paper);
+  }
+  body::before{
+    content:"";position:absolute;inset:0;pointer-events:none;
+    background-image:radial-gradient(rgba(47,79,74,.05) 1px, transparent 1px);
+    background-size:20px 20px;
+    mask-image:radial-gradient(circle at 50% 48%, rgba(0,0,0,.65), rgba(0,0,0,.12) 72%);
+  }
+
+  .stage{position:relative;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;
+    padding:78px 70px 64px}
+
+  .sk{position:absolute;object-fit:contain;pointer-events:none;
+    filter:drop-shadow(0 10px 20px rgba(47,79,74,.16))}
+
+  /* 品牌 */
+  .brand{display:flex;align-items:center;gap:12px}
+  .brand .dot{width:9px;height:9px;border-radius:50%;background:var(--mint)}
+  .brand h1{font-family:var(--round);font-size:38px;letter-spacing:.08em;color:var(--ink)}
+  .brand small{font-size:14px;letter-spacing:.36em;color:var(--mint-deep);opacity:.85}
+
+  /* 文案 */
+  .copy{text-align:center;margin-top:44px}
+  .copy .main{font-family:var(--round);font-size:64px;letter-spacing:.1em;color:var(--ink)}
+  .copy .sub{margin-top:14px;font-size:24px;letter-spacing:.18em;color:var(--ink-soft)}
+  .copy .dash{width:110px;height:3px;margin:22px auto 0;border-radius:3px;
+    background:repeating-linear-gradient(90deg, var(--mint) 0 9px, transparent 9px 18px)}
+
+  /* 二维码卡 */
+  .qr-wrap{position:relative;margin-top:44px}
+  .qr-card{
+    position:relative;width:472px;height:472px;border-radius:52px;background:#fff;
+    border:2.5px solid rgba(127,184,174,.45);padding:24px;
+    box-shadow:0 26px 52px rgba(47,79,74,.16);
+  }
+  .qr-card::before{
+    content:"";position:absolute;inset:11px;border-radius:42px;
+    border:2px dashed rgba(127,184,174,.55);pointer-events:none;
+  }
+  .qr-card img{width:100%;height:100%;display:block;border-radius:30px}
+
+  .addr{margin-top:44px;font-size:19px;letter-spacing:.1em;color:#a3b3ae}
+
+  .tape{position:absolute;width:182px;height:34px;border-radius:4px;z-index:5;
+    box-shadow:0 3px 8px rgba(47,79,74,.14)}
+  .tape.left{left:-40px;top:-18px;transform:rotate(-27deg);background:rgba(127,184,174,.66)}
+  .tape.right{right:-40px;bottom:-22px;transform:rotate(-24deg);background:rgba(247,230,180,.92)}
+
+  /* 角色：绕二维码一圈，全部从边缘探头 */
+  .sk-bear{width:150px;left:44px;top:96px;transform:rotate(-12deg)}
+  .sk-katsu{width:138px;right:52px;top:118px;transform:rotate(13deg)}
+  .sk-cat{width:168px;left:-16px;top:498px;transform:rotate(-8deg)}
+  .sk-tapi{width:152px;right:-14px;top:556px;transform:rotate(9deg)}
+  .sk-penguin{width:112px;left:132px;bottom:56px;transform:rotate(-6deg)}
+  .sk-ebi{width:104px;right:140px;bottom:66px;transform:rotate(8deg)}
+  .sk-weed{width:90px;left:50%;bottom:26px;transform:translateX(-50%) rotate(-4deg)}
+</style>
+</head>
+<body>
+<div class="stage">
+
+  <img class="sk sk-bear" src="../images/friends/bear.png" alt="" />
+  <img class="sk sk-katsu" src="../images/friends/katsu.png" alt="" />
+  <img class="sk sk-cat" src="../images/friends/cat.png" alt="" />
+  <img class="sk sk-tapi" src="../images/friends/tapioca.png" alt="" />
+  <img class="sk sk-penguin" src="../images/friends/penguin.png" alt="" />
+  <img class="sk sk-ebi" src="../images/friends/ebi.png" alt="" />
+  <img class="sk sk-weed" src="../images/friends/weed.png" alt="" />
+
+  <div class="brand">
+    <span class="dot"></span>
+    <h1>笨笨狗餐厅</h1>
+    <small>HOME KITCHEN</small>
+  </div>
+
+  <div class="copy">
+    <div class="main">扫码点单</div>
+    <div class="sub">提前 1-3 天预约</div>
+    <div class="dash"></div>
+  </div>
+
+  <div class="qr-wrap">
+    <span class="tape left"></span>
+    <span class="tape right"></span>
+    <div class="qr-card">
+      <img src="qr-server.png" alt="扫码点单" />
+    </div>
+  </div>
+
+  <div class="addr">101.43.45.186:8080</div>
+
+</div>
+</body>
+</html>

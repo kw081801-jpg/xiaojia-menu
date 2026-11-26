@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-小家菜单 · 后端（Python 标准库，无第三方依赖）
+笨笨狗餐厅 · 后端（Python 标准库，无第三方依赖）
 
     python server.py                     # 0.0.0.0:8080
     XJ_ADMIN_PASSWORD=新密码 python server.py
@@ -734,7 +734,7 @@ def main():
         print("!! 正在使用默认密码 xiaojia，公网部署请务必设置 XJ_ADMIN_PASSWORD")
     if host == "0.0.0.0":
         print("!! 监听 0.0.0.0，管理台对所有能连上的人开放；建议 --host 127.0.0.1 并用 Nginx 反代")
-    print("小家菜单：http://127.0.0.1:%d/   管理台 /admin.html" % port)
+    print("笨笨狗餐厅：http://127.0.0.1:%d/   管理台 /admin.html" % port)
     print("数据：%s" % DATA)
     ThreadingHTTPServer((host, port), H).serve_forever()
 

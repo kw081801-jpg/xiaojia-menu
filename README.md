@@ -1,4 +1,4 @@
-# 小家菜单 · 动态菜单页
+# 笨笨狗餐厅 · 动态菜单页
 
 **在线地址：<https://kw081801-jpg.github.io/xiaojia-menu/>**（GitHub Pages，全球可访问，手机直接开）
 

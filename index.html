@@ -1425,7 +1425,7 @@ textarea.wish-input{resize:vertical;line-height:1.7}
   // 招牌推荐是「镜像分类」：菜带「招牌」标签就自动出现在这里，原来的分类照样保留
   function inCat(d, key) {
     if (d.cat === key) return true;
-    if (key === "signature") return String(d.tag || "").indexOf("招牌") >= 0;
+    if (key === "signature") return tagsOf(d).indexOf("招牌") >= 0;
     return false;
   }
 

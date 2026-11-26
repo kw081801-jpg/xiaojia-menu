@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="theme-color" content="#fdf7ee" />
 <title>我的点菜 · 笨笨狗厨房</title>
-<link rel="preload" as="font" href="fonts/zcool-subset.woff2?v=4" type="font/woff2" crossorigin />
+<link rel="preload" as="font" href="fonts/zcool-subset.woff2?v=8" type="font/woff2" crossorigin />
 <style>
-@font-face{font-family:'ZCOOL KuaiLe';font-style:normal;font-weight:400;font-display:swap;src:url('fonts/zcool-subset.woff2?v=4') format('woff2')}
+@font-face{font-family:'ZCOOL KuaiLe';font-style:normal;font-weight:400;font-display:swap;src:url('fonts/zcool-subset.woff2?v=8') format('woff2')}
 *{box-sizing:border-box}
 html,body{margin:0;height:100%}
 body{background:#fdf7ee;color:#4b4139;font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
@@ -28,6 +28,8 @@ h1{font-family:"ZCOOL KuaiLe",serif;font-size:24px;margin:0;letter-spacing:.04em
 .items li{display:flex;justify-content:space-between;padding:11px 0;border-bottom:1px dashed rgba(150,125,100,.18);font-size:15px}
 .items li:last-child{border-bottom:0}
 .items .cat{color:#a89a89;font-size:12px}
+.items .qty{color:#b9554b;font-weight:600;font-size:14px}
+.guests{margin-top:10px;color:#8d8073;font-size:13px;line-height:1.7}
 .reply{margin-top:10px;padding:12px 14px;border-radius:12px;background:#fdf1ef;color:#9c4438;font-size:14px;line-height:1.7}
 .hint{color:#8d8073;font-size:12px;text-align:center;margin-top:22px;line-height:1.8}
 a.again{display:block;text-align:center;margin-top:18px;padding:13px;border-radius:14px;
@@ -71,13 +73,21 @@ a.again{display:block;text-align:center;margin-top:18px;padding:13px;border-radi
     .then(function (j) {
       if (!j || !j.order) { document.getElementById("sub").textContent = "找不到这个订单"; return; }
       var o = j.order;
-      document.getElementById("sub").textContent = "订单 #" + o.id;
+      document.getElementById("sub").textContent = "订单 #" + o.id + (o.visit ? " · " + o.visit + " 来" : "");
       document.getElementById("state").textContent = STATE[o.status] || o.status;
       document.getElementById("state").className = "state " + (o.status || "");
       document.getElementById("time").textContent = o.created || "";
       document.getElementById("items").innerHTML = (o.items || []).map(function (x) {
-        return '<li><span>' + (x.name || "") + '</span></li>';
+        var q = (x.qty && x.qty > 1) ? '<span class="qty">×' + x.qty + "</span>" : "";
+        return "<li><span>" + (x.name || "") + "</span>" + q + "</li>";
       }).join("");
+      var guests = (o.guests || []).filter(Boolean);
+      if (guests.length) {
+        var gp = document.createElement("p");
+        gp.className = "guests";
+        gp.textContent = "这一桌：" + guests.join("、");
+        document.getElementById("items").after(gp);
+      }
       if (o.reply) {
         var rp = document.getElementById("reply");
         rp.textContent = "大厨留言：" + o.reply;

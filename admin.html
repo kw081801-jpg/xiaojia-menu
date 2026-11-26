@@ -73,6 +73,8 @@ textarea{resize:vertical;line-height:1.65}
 .order h3{font-size:16px;margin-bottom:4px}
 .order p{margin:0;color:var(--dim);font-size:13px;line-height:1.7}
 .order .who{color:var(--accent-2);font-size:13px;margin-left:8px}
+.order .qty{color:#b9554b;font-size:13px;font-weight:600}
+.order .by{color:var(--dim);font-size:11.5px;margin-left:2px;opacity:.8}
 .order .ops{margin-top:8px;display:flex;gap:8px}
 .empty{color:var(--dim);text-align:center;padding:36px 0;font-size:14px}
 .tagchip{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:999px;
@@ -628,10 +630,15 @@ textarea{resize:vertical;line-height:1.65}
       $("#badgeNew").textContent = nw ? "(" + nw + ")" : "";
       $("#orderList").innerHTML = list.length ? list.map(function (o) {
         var stateText = { new: "待确认", confirmed: "已接单", rejected: "已拒绝", done: "已完成" }[o.status] || o.status;
+        var people = (o.guests && o.guests.length) ? o.guests : (o.who ? [o.who] : []);
+        var dishText = o.items.map(function (i) {
+          return esc(i.name) + (i.qty > 1 ? '<span class="qty"> ×' + i.qty + "</span>" : "") +
+            ((i.by && i.by.length > 1) ? '<span class="by">' + esc(i.by.join("/")) + "</span>" : "");
+        }).join("、");
         return '<div class="card order ' + o.status + '">' +
           '<span class="mini" style="float:right">' + stateText + "</span>" +
-          '<h3>#' + o.id + ' · ' + o.items.map(function (i) { return esc(i.name); }).join("、") +
-          (o.who ? '<span class="who">' + esc(o.who) + " 点的</span>" : "") +
+          '<h3>#' + o.id + ' · ' + dishText +
+          (people.length ? '<span class="who">' + esc(people.join("、")) + " 点的</span>" : "") +
           (o.visit ? '<span class="who">· ' + esc(o.visit) + " 来</span>" : "") + "</h3>" +
           '<p>' + esc(o.created) + (o.note ? " · " + esc(o.note) : "") + "</p>" +
           (o.reply ? '<p style="color:#b9554b">附言：' + esc(o.reply) + "</p>" : "") +

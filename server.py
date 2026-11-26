@@ -466,9 +466,34 @@ class H(BaseHTTPRequestHandler):
                     return self.json({"order": {
                         "id": o.get("id"), "status": o.get("status", "new"),
                         "reply": o.get("reply", ""),
+                        "visit": o.get("visit", ""),
+                        "who": o.get("who", ""),
+                        "guests": o.get("guests", []),
                         "items": o.get("items", []),
                     }})
             return self.json({"error": "not found"}, 404)
+        if p.path == "/api/day":
+            # 公开：看同一天这一桌已经点了什么（不含联系方式等私密内容）
+            day = (qs.get("date") or [""])[0].strip()[:10] or time.strftime("%Y-%m-%d")
+            with LOCK:
+                d = load()
+            found = None
+            for o in d["orders"]:
+                if o.get("visit") == day and o.get("status") not in ("rejected", "cancelled"):
+                    found = o
+                    break
+            if not found:
+                return self.json({"date": day, "orderId": None, "items": [], "guests": [], "note": ""})
+            items = [{"name": it.get("name", ""), "qty": int(it.get("qty", 1)),
+                      "by": it.get("by", [])} for it in found.get("items", [])]
+            return self.json({
+                "date": day,
+                "orderId": found.get("id"),
+                "status": found.get("status", "new"),
+                "items": items,
+                "guests": found.get("guests", []),
+                "note": found.get("note", ""),
+            })
         if p.path == "/api/orders":
             if not self.need_admin():
                 return
@@ -537,16 +562,54 @@ class H(BaseHTTPRequestHandler):
                 picked = [{"id": i, "name": names.get(i, i)} for i in ids if i in names]
                 if not picked:
                     return self.json({"error": "菜不在菜单里"}, 400)
+                visit = (str(b.get("visit", ""))[:10] or time.strftime("%Y-%m-%d"))
+                who = str(b.get("who", ""))[:40]
+                note = str(b.get("note", ""))[:200]
+                # 同一天的客人算一桌：已有这一天未结束的单，就并进去
+                existing = None
+                for o in d["orders"]:
+                    if o.get("visit") == visit and o.get("status") not in ("done", "rejected", "cancelled"):
+                        existing = o
+                        break
+                now = time.strftime("%Y-%m-%d %H:%M")
+                if existing is not None:
+                    index = {it.get("id"): it for it in existing.get("items", [])}
+                    for it in picked:
+                        cur = index.get(it["id"])
+                        if cur is not None:
+                            cur["qty"] = int(cur.get("qty", 1)) + 1
+                            by = cur.setdefault("by", [])
+                            if who and who not in by:
+                                by.append(who)
+                        else:
+                            it["qty"] = 1
+                            it["by"] = [who] if who else []
+                            existing.setdefault("items", []).append(it)
+                            index[it["id"]] = it
+                    if who:
+                        guests = existing.setdefault("guests", [])
+                        if who not in guests:
+                            guests.append(who)
+                    if note:
+                        existing["note"] = (existing.get("note", "") + "；" + note) if existing.get("note") else note
+                    existing["updated"] = now
+                    save(d)
+                    return self.json({"ok": True, "id": existing["id"], "merged": True, "count": len(existing["items"])})
+                for it in picked:
+                    it["qty"] = 1
+                    it["by"] = [who] if who else []
+                new_id = (max([int(o.get("id") or 0) for o in d["orders"]] or [0])) + 1
                 d["orders"].append({
-                    "id": (d["orders"][-1]["id"] + 1) if d["orders"] else 1,
-                    "created": time.strftime("%Y-%m-%d %H:%M"),
-                    "visit": str(b.get("visit", ""))[:10],
-                    "who": str(b.get("who", ""))[:40],
-                    "note": str(b.get("note", ""))[:200],
+                    "id": new_id,
+                    "created": now,
+                    "visit": visit,
+                    "who": who,
+                    "guests": [who] if who else [],
+                    "note": note,
                     "items": picked, "status": "new", "reply": "",
                 })
                 save(d)
-                return self.json({"ok": True, "id": d["orders"][-1]["id"]})
+                return self.json({"ok": True, "id": new_id, "merged": False})
         if p == "/api/wishes":
             dish = str(b.get("dish", "")).strip()[:60]
             if not dish:

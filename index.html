@@ -1162,7 +1162,7 @@ textarea.wish-input{resize:vertical;line-height:1.7}
   </div>
 
   <div id="cartBar" class="cart-bar" hidden>
-    <span class="cart-count">我 <b>0</b> 份 · 这桌 <b id="tableTotal">0</b> 道</span>
+    <span class="cart-count">已点 <b>0</b> 道</span>
     <button id="cartOpen" class="cart-btn">看菜单</button>
   </div>
 
@@ -1960,6 +1960,7 @@ textarea.wish-input{resize:vertical;line-height:1.7}
       markOrdered();
       loadDayPeek();
       syncCart();
+      syncGuestChip();
     }
     $("#guest").hidden = true;
     document.body.style.overflow = "";
@@ -2003,9 +2004,6 @@ textarea.wish-input{resize:vertical;line-height:1.7}
   function syncCart() {
     var bar = $("#cartBar");
     if (!bar) return;
-    var ordered = state.myOrdered || {};
-    var myQty = Object.keys(ordered).reduce(function (s, k) { return s + (Number(ordered[k]) || 0); }, 0);
-    var mine = state.cart.length + myQty;
     var names = {};
     (state.dayItems || []).forEach(function (i) { if (i && i.name) names[i.name] = 1; });
     state.cart.forEach(function (id) {
@@ -2013,11 +2011,9 @@ textarea.wish-input{resize:vertical;line-height:1.7}
       if (d) names[d.name] = 1;
     });
     var total = Object.keys(names).length;
-    bar.hidden = !(state.online && (total || mine));
+    bar.hidden = !(state.online && total);
     var b = bar.querySelector("b");
-    if (b) b.textContent = mine;
-    var t = $("#tableTotal");
-    if (t) t.textContent = total || mine;
+    if (b) b.textContent = total;
   }
   function addToCart(id, quiet) {
     if (!state.online) return;

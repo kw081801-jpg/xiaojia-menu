@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>小家菜单 · 分享海报</title>
+<style>
+  @font-face{font-family:'ZCOOL KuaiLe';font-style:normal;font-weight:400;font-display:block;
+    src:url('../fonts/zcool-subset.woff2?v=5') format('woff2')}
+
+  :root{
+    --paper:#fdf7ee;
+    --paper-2:#fffaf3;
+    --mint:#7fb8ae;
+    --mint-deep:#4e8a80;
+    --ink:#2f4f4a;
+    --ink-soft:#6c837e;
+    --cream:#f6e2a8;
+    --serif:'Noto Serif SC','Source Han Serif SC','STSong','SimSun',serif;
+    --round:'ZCOOL KuaiLe',system-ui,sans-serif;
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{width:1080px;height:1440px;overflow:hidden}
+  body{
+    font-family:var(--serif);
+    color:var(--ink);
+    background:
+      radial-gradient(900px 600px at 18% -6%, #eaf4ef 0%, rgba(234,244,239,0) 62%),
+      radial-gradient(760px 560px at 106% 16%, #fbeecd 0%, rgba(251,238,205,0) 58%),
+      var(--paper);
+    position:relative;
+  }
+  body::before{
+    content:"";position:absolute;inset:0;pointer-events:none;
+    background-image:radial-gradient(rgba(47,79,74,.055) 1px, transparent 1px);
+    background-size:18px 18px;
+    mask-image:linear-gradient(180deg, rgba(0,0,0,.85), rgba(0,0,0,.22) 46%, rgba(0,0,0,.04));
+  }
+
+  .poster{position:relative;width:100%;height:100%;padding:52px 60px 40px;display:flex;flex-direction:column}
+
+  /* ---------- 顶部 ---------- */
+  .head{position:relative;text-align:center;margin-bottom:20px}
+  .brand{display:inline-flex;align-items:center;justify-content:center;gap:14px}
+  .mark{
+    width:74px;height:74px;border-radius:50%;border:2px dashed var(--mint);
+    display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.72);
+  }
+  .mark svg{width:38px;height:38px;stroke:var(--mint-deep);fill:none;stroke-width:1.6;
+    stroke-linecap:round;stroke-linejoin:round}
+  .title{
+    font-family:var(--round);font-size:64px;line-height:1.05;letter-spacing:.06em;
+    text-shadow:0 2px 0 rgba(255,255,255,.9);
+  }
+  .sub{margin-top:12px;font-size:25px;letter-spacing:.15em;color:var(--ink-soft)}
+  .eyebrow{margin-top:9px;font-size:15px;letter-spacing:.42em;color:var(--mint-deep);opacity:.85}
+
+  .sk{position:absolute;object-fit:contain;pointer-events:none;
+    filter:drop-shadow(0 8px 14px rgba(47,79,74,.18))}
+  .sk-head-left{width:104px;left:-4px;top:-14px;transform:rotate(-9deg)}
+  .sk-head-right{width:94px;right:-2px;top:4px;transform:rotate(8deg)}
+
+  /* ---------- 主视觉 ---------- */
+  .hero-wrap{position:relative;flex:0 0 auto}
+  .hero{
+    position:relative;height:596px;border-radius:34px;overflow:hidden;
+    border:5px solid #fff;
+    box-shadow:0 22px 48px rgba(47,79,74,.16);
+  }
+  .hero > .cover-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+  .hero::after{
+    content:"";position:absolute;inset:0;pointer-events:none;
+    background:linear-gradient(180deg, rgba(18,38,34,.28) 0%, rgba(18,38,34,.02) 38%, rgba(12,28,25,.62) 100%);
+  }
+  .hero-txt{position:absolute;left:0;right:0;bottom:42px;text-align:center;z-index:3;color:#fff}
+  .hero-txt .big{
+    font-family:var(--round);font-size:54px;letter-spacing:.1em;
+    text-shadow:0 4px 20px rgba(0,0,0,.55), 0 1px 2px rgba(0,0,0,.4);
+  }
+  .hero-txt .small{margin-top:10px;font-size:19px;letter-spacing:.32em;opacity:.95;
+    text-shadow:0 2px 10px rgba(0,0,0,.5)}
+
+  .tape{
+    position:absolute;width:176px;height:34px;background:rgba(127,184,174,.62);
+    border-radius:4px;z-index:4;box-shadow:0 2px 6px rgba(47,79,74,.12);
+  }
+  .tape.hero-tape{left:-28px;top:22px;transform:rotate(-27deg)}
+  .tape.card-tape{right:-22px;top:-13px;transform:rotate(23deg);background:rgba(246,226,168,.9)}
+
+  /* 角色：放在 hero 外层，完整露出 */
+  .sk-hero-cat{width:172px;left:-52px;bottom:-30px;transform:rotate(-7deg);z-index:5}
+  .sk-hero-tapi{width:150px;right:-44px;bottom:-24px;transform:rotate(9deg);z-index:5}
+
+  /* ---------- 分类条 ---------- */
+  .cats{display:flex;justify-content:center;gap:11px;margin:24px 0 18px;flex-wrap:nowrap}
+  .cat{
+    font-family:var(--round);font-size:23px;color:var(--mint-deep);
+    background:rgba(255,255,255,.88);border:1.6px dashed rgba(127,184,174,.75);
+    padding:10px 19px;border-radius:999px;white-space:nowrap;
+  }
+
+  /* ---------- 二维码卡 ---------- */
+  .card{
+    position:relative;margin-top:auto;background:var(--paper-2);
+    border-radius:34px;border:2px solid rgba(127,184,174,.34);
+    box-shadow:0 18px 40px rgba(47,79,74,.12);
+    padding:32px 38px;display:flex;align-items:center;gap:34px;
+  }
+  .qr-wrap{
+    position:relative;flex:0 0 auto;width:296px;height:296px;border-radius:26px;
+    background:#fff;padding:13px;border:2px dashed rgba(127,184,174,.5);
+  }
+  .qr-wrap img{width:100%;height:100%;display:block;border-radius:14px}
+  .qr-note{margin-top:10px;text-align:center;font-size:16px;color:var(--ink-soft);letter-spacing:.22em}
+
+  .card-txt{flex:1 1 auto;min-width:0}
+  .card-txt .kicker{font-size:15px;letter-spacing:.34em;color:var(--mint-deep);opacity:.9}
+  .card-txt h2{font-family:var(--round);font-size:42px;line-height:1.3;margin:10px 0 12px;letter-spacing:.04em}
+  .card-txt p{font-size:20px;line-height:1.72;color:var(--ink-soft);letter-spacing:.03em}
+  .card-txt .addr{margin-top:14px;font-size:14px;color:#a3b3ae;letter-spacing:.04em;word-break:break-all}
+
+  .sk-card-penguin{width:112px;right:-16px;bottom:-30px;transform:rotate(-7deg);z-index:2}
+
+  /* ---------- 页脚 ---------- */
+  .foot{margin-top:26px;display:flex;align-items:center;justify-content:center;gap:20px;opacity:.92}
+  .foot img{width:46px;height:46px;object-fit:contain}
+  .foot .dot{width:6px;height:6px;border-radius:50%;background:rgba(127,184,174,.6)}
+</style>
+</head>
+<body>
+<div class="poster">
+
+  <header class="head">
+    <img class="sk sk-head-left" src="../images/friends/bear.png" alt="" />
+    <img class="sk sk-head-right" src="../images/friends/katsu.png" alt="" />
+    <div class="brand">
+      <span class="mark">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4.5 11.2h15a7.5 7.5 0 0 1-15 0Z" />
+          <path d="M9 7.6c0-1.1.9-1.4 1.4-2.2M13.2 7.6c0-1.1.9-1.4 1.4-2.2" />
+          <path d="M3.4 19.4h17.2" />
+        </svg>
+      </span>
+      <h1 class="title">小家菜单</h1>
+    </div>
+    <p class="sub">一屋两人 · 三餐四季 · 朋友来了先点菜</p>
+    <p class="eyebrow">HOME KITCHEN · 预点菜</p>
+  </header>
+
+  <div class="hero-wrap">
+    <span class="tape hero-tape"></span>
+    <section class="hero">
+      <img class="cover-img" src="../images/cover.webp" alt="小家菜单封面" />
+      <div class="hero-txt">
+        <div class="big">来做客，先点菜</div>
+        <div class="small">看看今天有什么</div>
+      </div>
+    </section>
+    <img class="sk sk-hero-cat" src="../images/friends/cat.png" alt="" />
+    <img class="sk sk-hero-tapi" src="../images/friends/tapioca.png" alt="" />
+  </div>
+
+  <nav class="cats">
+    <span class="cat">家常小炒</span>
+    <span class="cat">招牌推荐</span>
+    <span class="cat">融合料理</span>
+    <span class="cat">嘶哈嘶哈</span>
+    <span class="cat">汤品</span>
+  </nav>
+
+  <section class="card">
+    <span class="tape card-tape"></span>
+    <div>
+      <div class="qr-wrap">
+        <img src="qr-github.png" alt="扫码看菜单" />
+      </div>
+      <div class="qr-note">扫 我 点 菜</div>
+    </div>
+    <div class="card-txt">
+      <div class="kicker">SCAN &amp; ORDER</div>
+      <h2>扫一下，<br />看看今天想吃什么</h2>
+      <p>手机上直接打开，点开每道菜有食材和做法。<br />想吃的提前跟我说一声，我提前备菜。</p>
+      <div class="addr">kw081801-jpg.github.io/xiaojia-menu</div>
+    </div>
+    <img class="sk sk-card-penguin" src="../images/friends/penguin.png" alt="" />
+  </section>
+
+  <footer class="foot">
+    <img src="../images/friends/bear.png" alt="" />
+    <img src="../images/friends/tapioca.png" alt="" />
+    <span class="dot"></span>
+    <img src="../images/friends/lizard.png" alt="" />
+    <img src="../images/friends/penguin.png" alt="" />
+    <span class="dot"></span>
+    <img src="../images/friends/ebi.png" alt="" />
+  </footer>
+
+</div>
+</body>
+</html>

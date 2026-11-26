@@ -9,7 +9,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="笨笨狗餐厅"
+        android:text="笨笨狗厨房"
         android:textColor="#4B4139"
         android:textSize="20sp"
         android:textStyle="bold"

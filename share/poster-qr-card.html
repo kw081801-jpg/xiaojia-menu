@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
-<title>笨笨狗餐厅 · 扫码卡片</title>
+<title>扫码点单卡片</title>
 <style>
   @font-face{font-family:'ZCOOL KuaiLe';font-style:normal;font-weight:400;font-display:block;
     src:url('../fonts/zcool-subset.woff2?v=8') format('woff2')}
@@ -36,7 +36,7 @@
   }
 
   .stage{position:relative;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;
-    padding:78px 70px 64px}
+    justify-content:center;padding:64px 70px 56px}
 
   .sk{position:absolute;object-fit:contain;pointer-events:none;
     filter:drop-shadow(0 10px 20px rgba(47,79,74,.16))}
@@ -48,8 +48,8 @@
   .brand small{font-size:14px;letter-spacing:.36em;color:var(--mint-deep);opacity:.85}
 
   /* 文案 */
-  .copy{text-align:center;margin-top:44px}
-  .copy .main{font-family:var(--round);font-size:64px;letter-spacing:.1em;color:var(--ink)}
+  .copy{text-align:center;margin-top:0}
+  .copy .main{font-family:var(--round);font-size:70px;letter-spacing:.1em;color:var(--ink)}
   .copy .sub{margin-top:14px;font-size:24px;letter-spacing:.18em;color:var(--ink-soft)}
   .copy .dash{width:110px;height:3px;margin:22px auto 0;border-radius:3px;
     background:repeating-linear-gradient(90deg, var(--mint) 0 9px, transparent 9px 18px)}
@@ -95,11 +95,6 @@
   <img class="sk sk-ebi" src="../images/friends/ebi.png" alt="" />
   <img class="sk sk-weed" src="../images/friends/weed.png" alt="" />
 
-  <div class="brand">
-    <span class="dot"></span>
-    <h1>笨笨狗餐厅</h1>
-    <small>HOME KITCHEN</small>
-  </div>
 
   <div class="copy">
     <div class="main">扫码点单</div>

@@ -4,20 +4,20 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#fdf7ee" id="themeColor" />
-  <title>小家菜单 · 动态菜单</title>
+  <title>笨笨狗餐厅 · 动态菜单</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230b0a0e'/%3E%3Cg fill='none' stroke='%23e2cfa6' stroke-width='1.6' stroke-linecap='round'%3E%3Cpath d='M6 14h20'/%3E%3Cpath d='M8 14a8 8 0 0 0 16 0'/%3E%3Cpath d='M13 25h6'/%3E%3Cpath d='M16 22v3'/%3E%3C/g%3E%3C/svg%3E" />
-  <meta name="description" content="小家菜单 · 按分类浏览家常、招牌推荐、融合料理、嘶哈嘶哈、汤品、主食、甜品与饮品，六套主题随时切换，默认「角落」奶油风。" />
+  <meta name="description" content="笨笨狗餐厅 · 按分类浏览家常、招牌推荐、融合料理、嘶哈嘶哈、汤品、主食、甜品与饮品，六套主题随时切换，默认「角落」奶油风。" />
   <script>
     try {
       var t = localStorage.getItem("xj_theme");
       if (t) document.documentElement.setAttribute("data-theme", t);
     } catch (e) {}
   </script>
-  <link rel="preload" as="font" href="fonts/zcool-subset.woff2?v=7" type="font/woff2" crossorigin />
+  <link rel="preload" as="font" href="fonts/zcool-subset.woff2?v=8" type="font/woff2" crossorigin />
   <style>
 @font-face{font-family:'Cormorant Garamond';font-style:normal;font-weight:300 700;font-display:swap;src:url('fonts/cormorant-var.woff2') format('woff2')}
 @font-face{font-family:'Cormorant Garamond';font-style:italic;font-weight:300 700;font-display:swap;src:url('fonts/cormorant-var-italic.woff2') format('woff2')}
-@font-face{font-family:'ZCOOL KuaiLe';font-style:normal;font-weight:400;font-display:swap;src:url('fonts/zcool-subset.woff2?v=7') format('woff2')}
+@font-face{font-family:'ZCOOL KuaiLe';font-style:normal;font-weight:400;font-display:swap;src:url('fonts/zcool-subset.woff2?v=8') format('woff2')}
 /* =========================================================
    主题变量：夜宴（默认）
    ========================================================= */
@@ -1051,7 +1051,7 @@ textarea.wish-input{resize:vertical;line-height:1.7}
         </svg>
       </span>
       <div class="brand-text">
-        <h1 id="siteTitle">小家菜单</h1>
+        <h1 id="siteTitle">笨笨狗餐厅</h1>
         <p class="subtitle" id="siteSubtitle">一屋两人 · 三餐四季</p>
       </div>
       <div class="brand-right">
@@ -1422,6 +1422,13 @@ textarea.wish-input{resize:vertical;line-height:1.7}
     return !q || haystack(d).indexOf(q.toLowerCase()) !== -1;
   }
 
+  // 招牌推荐是「镜像分类」：菜带「招牌」标签就自动出现在这里，原来的分类照样保留
+  function inCat(d, key) {
+    if (d.cat === key) return true;
+    if (key === "signature") return String(d.tag || "").indexOf("招牌") >= 0;
+    return false;
+  }
+
   function visibleItems() {
     return D.filter(function (d) { return !d.hidden; });
   }
@@ -1451,7 +1458,7 @@ textarea.wish-input{resize:vertical;line-height:1.7}
     var shown = 0;
 
     groups.forEach(function (g, gi) {
-      var list = sortItems(all.filter(function (d) { return d.cat === g.key; }));
+      var list = sortItems(all.filter(function (d) { return inCat(d, g.key); }));
       shown += list.length;
       if (!list.length && q) return; // 搜索时隐藏空分组
 
@@ -1642,7 +1649,7 @@ textarea.wish-input{resize:vertical;line-height:1.7}
   // ---------- 今晚吃什么 ----------
   function pickRandom() {
     var r = state.random;
-    var pool = visibleItems().filter(function (d) { return !r.filter || d.cat === r.filter; });
+    var pool = visibleItems().filter(function (d) { return !r.filter || inCat(d, r.filter); });
     if (!pool.length) { r.current = null; return; }
     var pick;
     do { pick = pool[Math.floor(Math.random() * pool.length)]; }
@@ -1700,7 +1707,7 @@ textarea.wish-input{resize:vertical;line-height:1.7}
       var rows = [];
       var row = [];
       var drawable = CATS.filter(function (c) {
-        return visibleItems().some(function (d) { return d.cat === c.key; });
+        return visibleItems().some(function (d) { return inCat(d, c.key); });
       });
       drawable.forEach(function (c, i) {
         row.push('<button class="chip" data-filter="' + esc(c.key) + '">' + esc(c.label) + "</button>");
@@ -1753,7 +1760,7 @@ textarea.wish-input{resize:vertical;line-height:1.7}
     }
 
     var deck = $("#randDeck");
-    var pool = visibleItems().filter(function (d) { return !r.filter || d.cat === r.filter; });
+    var pool = visibleItems().filter(function (d) { return !r.filter || inCat(d, r.filter); });
     if (!pool.length) {
       deck.innerHTML = '<div class="rand-empty">这一类暂时没有菜<br>换个分类试试</div>';
     } else {

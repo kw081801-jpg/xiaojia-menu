@@ -21,8 +21,8 @@
    ========================================================= */
 
 window.MENU_SETTINGS = {
-  brand: "小家",
-  title: "小家菜单",
+  brand: "笨笨狗",
+  title: "笨笨狗餐厅",
   subtitle: "一屋两人 · 三餐四季 · 朋友来了先点菜",
   eyebrow: "HOME KITCHEN · 预点菜",
   coverSub: "来做客，先点菜",

@@ -203,7 +203,7 @@
 }
 
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;padding:0}
+html,body{margin:0;padding:0;overscroll-behavior-y:contain}
 html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 body{
   -webkit-tap-highlight-color:transparent;
@@ -2095,7 +2095,7 @@ textarea.wish-input{resize:vertical;line-height:1.7}
       "</div>" +
       (opt.rm
         ? '<button class="o-rm" data-rm="' + esc(opt.rm) + '" aria-label="移除">✕</button>'
-        : (opt.canDec ? '<button class="o-dec" data-dec="' + esc(opt.name) + '" aria-label="减一份">−</button>' : '')) +
+        : '<button class="o-dec" data-dec="' + esc(opt.name) + '" aria-label="减一份">−</button>') +
       "</li>";
   }
 
@@ -2296,6 +2296,30 @@ textarea.wish-input{resize:vertical;line-height:1.7}
         checkOrder();
       });
   }
+
+  // 长按标题栏刷新（下拉刷新已关掉，避免误触）
+  (function () {
+    var el = document.querySelector(".brandbar");
+    if (!el) return;
+    var timer = null;
+    function start(e) {
+      if (e.touches && e.touches.length > 1) return;
+      clearTimeout(timer);
+      timer = setTimeout(function () {
+        try { if (navigator.vibrate) navigator.vibrate(25); } catch (err) {}
+        location.reload();
+      }, 900);
+    }
+    function cancel() { clearTimeout(timer); }
+    el.addEventListener("touchstart", start, { passive: true });
+    el.addEventListener("touchend", cancel);
+    el.addEventListener("touchmove", cancel);
+    el.addEventListener("touchcancel", cancel);
+    el.addEventListener("mousedown", start);
+    el.addEventListener("mouseup", cancel);
+    el.addEventListener("mouseleave", cancel);
+    el.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+  })();
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", start);

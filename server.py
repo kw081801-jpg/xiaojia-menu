@@ -643,9 +643,18 @@ class H(BaseHTTPRequestHandler):
                 if target is None:
                     return self.json({"error": "单里没有这道菜"}, 404)
                 q = dict(target.get("byQty") or {})
-                cur = int(q.get(who, 0)) if who else int(target.get("qty", 1))
-                if who and delta < 0 and cur <= 0:
-                    return self.json({"error": "你没有点这道菜"}, 400)
+                if not q:
+                    # 老单没有 byQty，补一份给下单人
+                    q = {str(target.get("by", ["客人"])[0] if target.get("by") else "客人"): int(target.get("qty", 1))}
+                cur = int(q.get(who, 0)) if who else 0
+                if delta < 0 and cur <= 0:
+                    # 自己没份，就从别人那份里减（同一桌都能改）
+                    cands = [k for k, v in q.items() if int(v) > 0]
+                    if cands:
+                        who = cands[-1]
+                        cur = int(q.get(who, 0))
+                if delta < 0 and cur <= 0:
+                    return self.json({"error": "这道菜没有可以减的份"}, 400)
                 newq = cur + delta
                 if who:
                     if newq <= 0:

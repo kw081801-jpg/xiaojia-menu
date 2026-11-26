@@ -72,9 +72,18 @@ textarea{resize:vertical;line-height:1.65}
 .order.new{border-left-color:#e0a24a}
 .order h3{font-size:16px;margin-bottom:4px}
 .order p{margin:0;color:var(--dim);font-size:13px;line-height:1.7}
-.order .who{color:var(--accent-2);font-size:13px;margin-left:8px}
-.order .qty{color:#b9554b;font-size:13px;font-weight:600}
-.order .by{color:var(--dim);font-size:11.5px;margin-left:2px;opacity:.8}
+.order .dish{font-weight:600}
+.order .qty{color:#b9554b;font-size:14px;font-weight:600;margin-left:2px}
+.order .sep{color:var(--line);margin:0 7px}
+.order .visit{margin:3px 0 0;font-size:12.5px;color:var(--accent-2)}
+.order .byline{margin:4px 0 0;font-size:12.5px;color:var(--dim)}
+.order .meta{margin:3px 0 0;color:var(--dim);font-size:12px}
+#prepSummary{margin-bottom:14px}
+.prep-row{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px;padding:11px 14px;border-radius:14px;
+  background:rgba(127,184,174,.13);border:1.5px dashed rgba(127,184,174,.5);margin-bottom:9px}
+.prep-date{font-size:13px;color:var(--accent-2);font-weight:600;flex:0 0 auto}
+.prep-dishes{flex:1 1 auto;font-size:15px;line-height:1.75;min-width:200px}
+.prep-total{font-size:12px;color:var(--dim);flex:0 0 auto}
 .order .ops{margin-top:8px;display:flex;gap:8px}
 .empty{color:var(--dim);text-align:center;padding:36px 0;font-size:14px}
 .tagchip{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:999px;
@@ -146,6 +155,7 @@ textarea{resize:vertical;line-height:1.65}
         <span class="hint" style="margin:0">用户提交的点菜会出现在这里</span>
         <button id="refreshOrders" class="mini">刷新</button>
       </div>
+      <div id="prepSummary"></div>
       <div id="orderList"></div>
     </section>
 
@@ -623,6 +633,31 @@ textarea{resize:vertical;line-height:1.65}
     }
   });
 
+  function renderPrep(list) {
+    var box = $("#prepSummary");
+    if (!box) return;
+    var live = list.filter(function (o) { return o.status !== "rejected" && o.status !== "done"; });
+    if (!live.length) { box.innerHTML = ""; return; }
+    var byDate = {}, order = [];
+    live.forEach(function (o) {
+      var d = o.visit || (o.created || "").slice(0, 10) || "未定日期";
+      if (!byDate[d]) { byDate[d] = {}; order.push(d); }
+      (o.items || []).forEach(function (i) {
+        byDate[d][i.name] = (byDate[d][i.name] || 0) + (i.qty || 1);
+      });
+    });
+    order.sort();
+    box.innerHTML = order.map(function (d) {
+      var names = Object.keys(byDate[d]);
+      var total = names.reduce(function (s, n) { return s + byDate[d][n]; }, 0);
+      var dishes = names.map(function (n) {
+        return '<span class="dish">' + esc(n) + '</span><span class="qty">×' + byDate[d][n] + "</span>";
+      }).join('<span class="sep">·</span>');
+      return '<div class="prep-row"><span class="prep-date">' + esc(d) + "</span>" +
+        '<div class="prep-dishes">' + dishes + "</div>" +
+        '<span class="prep-total">共 ' + total + ' 份</span></div>';
+    }).join("");
+  }
   function loadOrders() {
     api("api/orders").then(function (j) {
       var list = j.orders || [];
@@ -631,16 +666,30 @@ textarea{resize:vertical;line-height:1.65}
       $("#orderList").innerHTML = list.length ? list.map(function (o) {
         var stateText = { new: "待确认", confirmed: "已接单", rejected: "已拒绝", done: "已完成" }[o.status] || o.status;
         var people = (o.guests && o.guests.length) ? o.guests : (o.who ? [o.who] : []);
+        // 厨师看的是「这道菜几份」，不是谁点的
         var dishText = o.items.map(function (i) {
-          return esc(i.name) + (i.qty > 1 ? '<span class="qty"> ×' + i.qty + "</span>" : "") +
-            ((i.by && i.by.length > 1) ? '<span class="by">' + esc(i.by.join("/")) + "</span>" : "");
-        }).join("、");
+          return '<span class="dish">' + esc(i.name) + "</span>" +
+            '<span class="qty">×' + (i.qty || 1) + "</span>";
+        }).join('<span class="sep">·</span>');
+        // 谁点了什么，次要信息
+        var personLines = {};
+        o.items.forEach(function (i) {
+          ((i.by && i.by.length) ? i.by : [""]).forEach(function (p) {
+            if (!p) return;
+            (personLines[p] = personLines[p] || []).push(i.name);
+          });
+        });
+        var detail = Object.keys(personLines).map(function (p) {
+          return esc(p) + " " + esc(personLines[p].join("、"));
+        }).join("　");
+
         return '<div class="card order ' + o.status + '">' +
           '<span class="mini" style="float:right">' + stateText + "</span>" +
-          '<h3>#' + o.id + ' · ' + dishText +
-          (people.length ? '<span class="who">' + esc(people.join("、")) + " 点的</span>" : "") +
-          (o.visit ? '<span class="who">· ' + esc(o.visit) + " 来</span>" : "") + "</h3>" +
-          '<p>' + esc(o.created) + (o.note ? " · " + esc(o.note) : "") + "</p>" +
+          '<h3>#' + o.id + " · " + dishText + "</h3>" +
+          (o.visit ? '<p class="visit">' + esc(o.visit) + " 来" +
+            (people.length ? " · " + esc(people.join("、")) : "") + "</p>" : "") +
+          (detail ? '<p class="byline">' + detail + "</p>" : "") +
+          '<p class="meta">' + esc(o.created) + (o.note ? " · " + esc(o.note) : "") + "</p>" +
           (o.reply ? '<p style="color:#b9554b">附言：' + esc(o.reply) + "</p>" : "") +
           '<div class="ops">' +
           '<button class="mini" data-ok="' + o.id + '">接单</button>' +
@@ -648,6 +697,8 @@ textarea{resize:vertical;line-height:1.65}
           '<button class="mini" data-done="' + o.id + '">' + (o.status === "done" ? "改回未做" : "标记已做") + "</button>" +
           '<button class="mini" data-odel="' + o.id + '">删除</button></div></div>';
       }).join("") : '<div class="card empty">还没有人点菜</div>';
+
+      renderPrep(list);
     });
   }
   $("#refreshOrders").addEventListener("click", loadOrders);

@@ -849,8 +849,9 @@ body{
 .cart-list{list-style:none;margin:0 0 14px;padding:0;max-height:34vh;overflow:auto}
 .day-peek{margin:0 0 14px;padding:11px 14px;border-radius:14px;
   background:rgba(127,184,174,.14);border:1.5px dashed rgba(127,184,174,.55)}
-.day-peek .day-head{font-size:12.5px;letter-spacing:.06em;color:var(--accent-2);margin:0}
-.day-peek .day-items{margin:7px 0 0;font-size:14px;line-height:1.65;color:var(--ink)}
+.day-peek .day-line{display:flex;gap:10px;margin:0;font-size:14px;line-height:1.7;color:var(--ink)}
+.day-peek .day-line + .day-line{margin-top:4px}
+.day-peek .day-who{flex:0 0 auto;color:var(--accent-2);font-size:13px}
 .cart-list li{display:flex;align-items:center;justify-content:space-between;gap:10px;
   padding:11px 2px;border-bottom:1px dashed var(--line);font-size:15px}
 .cart-list li small{color:var(--ink-dim);font-size:12px;margin-left:10px}
@@ -1950,7 +1951,7 @@ textarea.wish-input{resize:vertical;line-height:1.7}
         }).join("")
       : '<li class="cart-empty">还没选菜，回去点点看</li>';
   }
-  // 同一桌：看这一天别人已经点了什么
+  // 同一桌：按人列出这一天别人点了什么
   function loadDayPeek() {
     var box = $("#dayPeek");
     if (!box) return;
@@ -1961,13 +1962,28 @@ textarea.wish-input{resize:vertical;line-height:1.7}
       .then(function (j) {
         var items = j.items || [];
         if (!items.length) { box.hidden = true; return; }
-        var people = (j.guests || []).filter(Boolean);
-        var head = "这天已经点了" + (people.length ? "（" + people.join("、") + "）" : "");
-        box.innerHTML =
-          '<p class="day-head">' + esc(head) + "</p>" +
-          '<p class="day-items">' + items.map(function (i) {
-            return esc(i.name) + (i.qty > 1 ? " ×" + i.qty : "");
-          }).join("、") + "</p>";
+        var me = (state.guest && state.guest.name) || "";
+        var byPerson = {};
+        var order = [];
+        items.forEach(function (i) {
+          var label = i.name;
+          var who = (i.by && i.by.length) ? i.by : [""];
+          who.forEach(function (p) {
+            if (!p) { byPerson[""] = (byPerson[""] || []).concat(label); return; }
+            if (!byPerson[p]) { byPerson[p] = []; order.push(p); }
+            byPerson[p].push(label);
+          });
+        });
+        var lines = order.filter(function (p) { return p !== me; }).map(function (p) {
+          return '<p class="day-line"><span class="day-who">' + esc(p) + "</span><span>" +
+            esc(byPerson[p].join("、")) + "</span></p>";
+        });
+        if (byPerson[""]) {
+          lines.push('<p class="day-line"><span class="day-who">已点</span><span>' +
+            esc(byPerson[""].join("、")) + "</span></p>");
+        }
+        if (!lines.length) { box.hidden = true; return; }
+        box.innerHTML = lines.join("");
         box.hidden = false;
       })
       .catch(function () { box.hidden = true; });
@@ -2011,7 +2027,7 @@ textarea.wish-input{resize:vertical;line-height:1.7}
         try { localStorage.setItem("xj_last_order", JSON.stringify({ id: res.id, at: Date.now() })); } catch (e) {}
         checkOrder();
       }
-      toast(res && res.merged ? "已经并到这天那桌了" : "点好了，等大厨确认");
+      toast("点好了，等大厨确认");
     }).catch(function () {
       btn.disabled = false;
       btn.textContent = "提交失败，重试";

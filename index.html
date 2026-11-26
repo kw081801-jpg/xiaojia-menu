@@ -881,7 +881,26 @@ body{
 .day-peek .day-who{flex:0 0 auto;color:var(--accent-2);font-size:13px}
 .cart-list li{display:flex;align-items:center;justify-content:space-between;gap:10px;
   padding:11px 2px;border-bottom:1px dashed var(--line);font-size:15px}
-.cart-list li small{color:var(--ink-dim);font-size:12px;margin-left:10px}
+/* 订单行：缩略图 + 菜名数量 + 点单人 */
+.o-head{list-style:none;font-size:12px;letter-spacing:.08em;color:var(--ink-dim);
+  margin:14px 0 4px;padding:0 2px}
+.o-head:first-child{margin-top:2px}
+.o-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px dashed rgba(150,125,100,.18)}
+.o-row:last-child{border-bottom:0}
+.o-thumb{width:58px;height:58px;border-radius:16px;object-fit:cover;flex:0 0 auto;
+  background:var(--accent-soft)}
+.o-thumb-empty{display:flex;align-items:center;justify-content:center;font-family:var(--round);
+  font-size:22px;color:var(--accent-2);opacity:.8}
+.o-info{flex:1 1 auto;min-width:0}
+.o-top{display:flex;align-items:baseline;gap:8px}
+.o-name{font-size:15.5px;color:var(--ink);letter-spacing:.01em;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.o-qty{flex:0 0 auto;font-size:14px;font-weight:600;color:var(--accent-2)}
+.o-by{margin-top:3px;font-size:12px;color:var(--ink-dim);letter-spacing:.02em}
+.o-mine .o-qty{color:#b9554b}
+.o-rm{flex:0 0 auto;border:0;background:transparent;color:var(--ink-dim);cursor:pointer;
+  font-size:15px;padding:8px 4px}
+.o-rm:hover{color:var(--accent-2)}.cart-list li small{color:var(--ink-dim);font-size:12px;margin-left:10px}
 .cart-list button{border:0;background:transparent;color:var(--ink-dim);cursor:pointer;font-size:14px;padding:4px 6px}
 .cart-list button:hover{color:var(--accent-2)}
 .cart-empty{justify-content:center!important;color:var(--ink-dim);border:0!important;padding:26px 0!important}
@@ -1156,7 +1175,6 @@ textarea.wish-input{resize:vertical;line-height:1.7}
         <h2 class="cart-title">今晚菜单</h2>
         <div class="order-note" id="orderState" hidden></div>
         <p class="cart-sub">想吃的都点上</p>
-        <div class="day-peek" id="dayPeek" hidden></div>
         <ul class="cart-list" id="cartList"></ul>
         <div class="cart-form">
           <textarea id="cartNote" class="cart-input cart-note" rows="2" maxlength="200"
@@ -2015,65 +2033,91 @@ textarea.wish-input{resize:vertical;line-height:1.7}
     syncCart();
     renderCart();
   }
+  function itemByName(name) {
+    var list = D || [];
+    for (var i = 0; i < list.length; i++) {
+      if (list[i].name === name) return list[i];
+    }
+    return null;
+  }
+
+  // 一行 = 缩略图 + 菜名/数量 + 谁点的
+  function orderRow(opt) {
+    var thumb;
+    if (opt.img) {
+      thumb = '<img class="o-thumb" src="' + esc(opt.img) + '" alt="" loading="lazy" />';
+    } else {
+      thumb = '<span class="o-thumb o-thumb-empty">' + esc(String(opt.name || "菜").charAt(0)) + "</span>";
+    }
+    var by = (opt.by || []).filter(Boolean);
+    var byTxt = by.length ? by.join("、") : "";
+    return '<li class="o-row' + (opt.mine ? " o-mine" : "") + '">' +
+      thumb +
+      '<div class="o-info">' +
+        '<div class="o-top"><span class="o-name">' + esc(opt.name) + "</span>" +
+          '<span class="o-qty">×' + (opt.qty || 1) + "</span></div>" +
+        (byTxt ? '<div class="o-by">' + esc(byTxt) + "</div>" : "") +
+      "</div>" +
+      (opt.rm ? '<button class="o-rm" data-rm="' + esc(opt.rm) + '" aria-label="移除">✕</button>' : "") +
+      "</li>";
+  }
+
   function renderCart() {
     var ul = $("#cartList");
     if (!ul) return;
-    var items = state.cart.map(itemById).filter(Boolean);
-    ul.innerHTML = items.length
-      ? items.map(function (d) {
-          var c = catMap[d.cat];
-          return "<li><span>" + esc(d.name) +
-            (c ? "<small>" + esc(c.label) + "</small>" : "") +
-            '</span><button data-rm="' + esc(itemId(d)) + '" aria-label="移除">✕</button></li>';
-        }).join("")
-      : '<li class="cart-empty">还没选菜，回去点点看</li>';
+    var rows = [];
+    var dayRows = (state.dayItems || []).map(function (i) {
+      var d = itemByName(i.name);
+      return orderRow({
+        name: i.name,
+        qty: i.qty || 1,
+        by: (i.by || []).filter(Boolean).map(function (p) {
+          return p === (state.guest && state.guest.name) ? "我" : p;
+        }),
+        img: d ? d.img : ""
+      });
+    });
+    var mine = state.cart.map(itemById).filter(Boolean).map(function (d) {
+      return orderRow({
+        name: d.name,
+        qty: 1,
+        by: [(state.guest && state.guest.name) ? "我" : ""],
+        img: d.img,
+        mine: true,
+        rm: itemId(d)
+      });
+    });
+    if (dayRows.length) {
+      rows.push('<li class="o-head">这桌已经点的</li>');
+      rows = rows.concat(dayRows);
+    }
+    if (mine.length) {
+      rows.push('<li class="o-head">我这次加的</li>');
+      rows = rows.concat(mine);
+    }
+    ul.innerHTML = rows.length ? rows.join("") : '<li class="cart-empty">还没选菜，回去点点看</li>';
   }
-  // 同一桌：按人列出这一天别人点了什么
+  // 拉这一桌已经点了什么（清单在 renderCart 里统一渲染）
   function loadDayPeek() {
-    var box = $("#dayPeek");
-    if (!box) return;
     var date = (state.guest && state.guest.date) || "";
-    if (!state.online || !date) { box.hidden = true; return; }
-    fetch("api/day?date=" + encodeURIComponent(date))
+    if (!state.online || !date) { state.dayItems = []; state.myOrdered = {}; return; }
+    fetch("api/day?date=" + encodeURIComponent(date), { cache: "no-store" })
       .then(function (r) { return r.json(); })
       .then(function (j) {
         var items = j.items || [];
         state.dayItems = items;
-        syncCart();
-        if (!items.length) { box.hidden = true; return; }
         var me = (state.guest && state.guest.name) || "";
-        var byPerson = {};   // 人名 -> [菜名×份数]
-        var qtyOf = {};      // 人名 -> { 菜名: 份数 }
-        var order = [];
+        var qtyOf = {};
         items.forEach(function (i) {
-          var who = (i.by && i.by.length) ? i.by : [""];
-          who.forEach(function (p) {
-            var n = (i.byQty && i.byQty[p]) ? Number(i.byQty[p]) : 1;
-            var label = i.name + (n > 1 ? " ×" + n : "");
-            if (!p) { byPerson[""] = (byPerson[""] || []).concat(label); return; }
-            if (!byPerson[p]) { byPerson[p] = []; qtyOf[p] = {}; order.push(p); }
-            byPerson[p].push(label);
-            qtyOf[p][i.name] = (qtyOf[p][i.name] || 0) + n;
-          });
+          var q = i.byQty || {};
+          if (me && q[me]) qtyOf[i.name] = (qtyOf[i.name] || 0) + Number(q[me]);
         });
-        var lines = order.map(function (p) {
-          var mine = me && p === me;
-          return '<p class="day-line' + (mine ? " mine" : "") + '"><span class="day-who">' +
-            esc(mine ? "我" : p) + "</span><span>" + esc(byPerson[p].join("、")) + "</span></p>";
-        });
-        if (byPerson[""]) {
-          lines.push('<p class="day-line"><span class="day-who">已点</span><span>' +
-            esc(byPerson[""].join("、")) + "</span></p>");
-        }
-        // 自己已经点过的菜，顺手标到卡片上，免得重复点
-        state.myOrdered = (me && qtyOf[me]) ? qtyOf[me] : {};
+        state.myOrdered = qtyOf;
         markOrdered();
         syncCart();
-        if (!lines.length) { box.hidden = true; return; }
-        box.innerHTML = lines.join("");
-        box.hidden = false;
+        if ($("#cartModal") && !$("#cartModal").hidden) renderCart();
       })
-      .catch(function () { box.hidden = true; });
+      .catch(function () {});
   }
 
   function openCart() {

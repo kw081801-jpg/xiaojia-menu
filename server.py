@@ -717,16 +717,6 @@ class H(BaseHTTPRequestHandler):
                 return self.json({"error": "菜名不能空"}, 400)
             with LOCK:
                 d = load()
-                # 重名自动加后缀：番茄炒蛋 -> 番茄炒蛋（2）
-                base = str(it.get("name", "")).strip()
-                clash = [x for x in d["items"]
-                         if str(x.get("id")) != str(it.get("id"))
-                         and str(x.get("name", "")).strip() == base]
-                if clash:
-                    n = 2
-                    while any(str(x.get("name", "")).strip() == "%s（%d）" % (base, n) for x in d["items"]):
-                        n += 1
-                    it["name"] = "%s（%d）" % (base, n)
                 it["id"] = it.get("id") or slug(it["name"]) + "-" + secrets.token_hex(3)
                 for i, old in enumerate(d["items"]):
                     if old.get("id") == it["id"]:

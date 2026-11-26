@@ -1991,6 +1991,24 @@ textarea.wish-input{resize:vertical;line-height:1.7}
     document.body.style.overflow = "";
   }
 
+  // 昵称弹窗：确认 / 点遮罩关闭
+  (function () {
+    var ok = document.getElementById("guestOk");
+    if (ok) {
+      ok.addEventListener("click", function () { closeGuest(true); });
+    }
+    var back = document.querySelector("#guest .guest-backdrop");
+    if (back) {
+      back.addEventListener("click", function () { closeGuest(false); });
+    }
+    var nameEl = document.getElementById("guestName");
+    if (nameEl) {
+      nameEl.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") { e.preventDefault(); closeGuest(true); }
+      });
+    }
+  })();
+
   function syncGuestChip() {
     var btn = $("#guestBtn");
     if (!btn) return;

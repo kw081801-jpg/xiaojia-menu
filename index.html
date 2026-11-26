@@ -2377,9 +2377,10 @@ textarea.wish-input{resize:vertical;line-height:1.7}
       if (e.target === cover || e.target.classList.contains("cover-veil") || e.target.classList.contains("cover-bg")) enter();
     });
 
-    // 上次已经报过到，就别再让人填一遍
+    // 首页照常显示；报过到的人信息已预填，点一下就能进
     if (state.guest && state.guest.name && state.guest.date) {
-      cover.style.display = "none";
+      var ce = $("#coverEnter");
+      if (ce) ce.textContent = "继续点菜 →";
       loadDayPeek();
     }
   }

@@ -367,7 +367,15 @@ body{
 .card-media.no-img span:not(.card-badge){
   font-family:var(--serif);font-size:56px;color:var(--accent-2);opacity:.5;font-weight:600
 }
-.card-badge{
+.card-add{position:absolute;right:11px;bottom:11px;z-index:4;width:42px;height:42px;border-radius:50%;
+  border:1.6px solid rgba(127,184,174,.75);background:rgba(255,255,255,.94);color:var(--accent-2);
+  font-size:23px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;
+  box-shadow:0 6px 16px rgba(47,79,74,.2);opacity:0;transform:translateY(4px);transition:.18s ease}
+.card:hover .card-add,.card:focus-within .card-add{opacity:1;transform:none}
+.card-add:active{transform:scale(.94)}
+@media (hover:none),(max-width:820px){.card-add{opacity:1;transform:none}}
+.cart-count{white-space:nowrap;font-size:13px}
+.cart-count b#tableTotal{color:var(--accent-2)}.card-badge{
   position:absolute;right:12px;top:12px;z-index:2;
   font-size:11px;padding:4px 12px;border-radius:999px;letter-spacing:.08em;
   color:var(--chip-ink);background-color:var(--accent-2);font-weight:500;
@@ -840,7 +848,7 @@ body{
 .cart-bar[hidden]{display:none}
 .cart-count{font-size:13px;color:var(--ink-dim);letter-spacing:.04em}
 .cart-count b{color:var(--accent-2);font-size:15px;margin:0 2px}
-.cart-btn{border:0;border-radius:999px;padding:9px 16px;background-color:var(--accent);color:var(--chip-ink);
+.cart-btn{white-space:nowrap;border:0;border-radius:999px;padding:9px 16px;background-color:var(--accent);color:var(--chip-ink);
   font:inherit;font-size:13px;cursor:pointer;letter-spacing:.04em}
 .cart-card{width:min(440px,100%);max-height:86vh;overflow:auto}
 .cart-inner{padding:26px 24px 22px}
@@ -1115,8 +1123,8 @@ textarea.wish-input{resize:vertical;line-height:1.7}
   </div>
 
   <div id="cartBar" class="cart-bar" hidden>
-    <span class="cart-count">已选 <b>0</b> 道</span>
-    <button id="cartOpen" class="cart-btn">看看今晚菜单</button>
+    <span class="cart-count">我 <b>0</b> · 这桌 <b id="tableTotal">0</b></span>
+    <button id="cartOpen" class="cart-btn">看菜单</button>
   </div>
 
   <div id="cartModal" class="modal" hidden>
@@ -1214,6 +1222,7 @@ textarea.wish-input{resize:vertical;line-height:1.7}
     query: "",
     sound: localStorage.getItem("xj_sound") !== "0",
     cart: [],
+    dayItems: [],
     guest: null,
     online: false,
     random: { stage: "pick", filter: null, chosen: false, revealed: false, current: null, last: null }
@@ -1534,6 +1543,7 @@ textarea.wish-input{resize:vertical;line-height:1.7}
       '<div class="card-media' + (d.img ? "" : " no-img") + '">' +
         (d.img ? imageTag(d) : '<span aria-hidden="true">' + esc(String(d.name || "菜").charAt(0)) + "</span>") +
         (tagsOf(d).length ? '<span class="card-badge">' + esc(tagsOf(d)[0]) + "</span>" : "") +
+        (state.online ? '<button class="card-add" data-order="' + esc(itemId(d)) + '" data-quiet="1" aria-label="加入今晚菜单">＋</button>' : "") +
       "</div>" +
       '<div class="card-body">' +
         '<div class="card-top">' +
@@ -1548,7 +1558,10 @@ textarea.wish-input{resize:vertical;line-height:1.7}
         "</div>" +
       "</div>";
     function open() { SFX.click(); openDetail(d); }
-    el.addEventListener("click", open);
+    el.addEventListener("click", function (e) {
+      if (e.target.closest("[data-order]")) return; // 加号由全局委托处理，不弹详情
+      open();
+    });
     el.addEventListener("keydown", function (e) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); }
     });
@@ -1920,17 +1933,21 @@ textarea.wish-input{resize:vertical;line-height:1.7}
   function syncCart() {
     var bar = $("#cartBar");
     if (!bar) return;
-    bar.hidden = !(state.online && state.cart.length);
+    var others = (state.dayItems || []).length;
+    var total = state.cart.length + others;
+    bar.hidden = !(state.online && total);
     var b = bar.querySelector("b");
     if (b) b.textContent = state.cart.length;
+    var t = $("#tableTotal");
+    if (t) t.textContent = total;
   }
-  function addToCart(id) {
+  function addToCart(id, quiet) {
     if (!state.online) return;
-    if (state.cart.indexOf(id) >= 0) { toast("已经在今晚菜单里了"); return; }
+    if (state.cart.indexOf(id) >= 0) { if (!quiet) toast("已经在今晚菜单里了"); return; }
     state.cart.push(id);
     cartSave();
     syncCart();
-    toast("已加入今晚菜单");
+    if (!quiet) toast("已加入今晚菜单");
   }
   function removeFromCart(id) {
     state.cart = state.cart.filter(function (x) { return x !== id; });
@@ -1961,6 +1978,8 @@ textarea.wish-input{resize:vertical;line-height:1.7}
       .then(function (r) { return r.json(); })
       .then(function (j) {
         var items = j.items || [];
+        state.dayItems = items;
+        syncCart();
         if (!items.length) { box.hidden = true; return; }
         var me = (state.guest && state.guest.name) || "";
         var byPerson = {};
@@ -2036,7 +2055,7 @@ textarea.wish-input{resize:vertical;line-height:1.7}
 
   document.addEventListener("click", function (e) {
     var add = e.target.closest("[data-order]");
-    if (add) { addToCart(add.dataset.order); return; }
+    if (add) { addToCart(add.dataset.order, add.dataset.quiet === "1"); return; }
     var rm = e.target.closest("[data-rm]");
     if (rm) { removeFromCart(rm.dataset.rm); return; }
     if (e.target.closest("[data-closecart]")) { closeCart(); return; }
@@ -2086,6 +2105,7 @@ textarea.wish-input{resize:vertical;line-height:1.7}
         name: ((nameEl && nameEl.value) || "").trim() || "神秘来客"
       };
       try { localStorage.setItem("xj_guest", JSON.stringify(state.guest)); } catch (e) {}
+      loadDayPeek();
       cover.classList.add("hide");
       setTimeout(function () { cover.style.display = "none"; }, 900);
     }

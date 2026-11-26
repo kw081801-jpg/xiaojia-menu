@@ -899,19 +899,16 @@ body{
 .o-thumb-empty{display:flex;align-items:center;justify-content:center;font-family:var(--round);
   font-size:22px;color:var(--accent-2);opacity:.8}
 .o-info{flex:1 1 auto;min-width:0}
-.o-top{display:flex;align-items:baseline;gap:8px}
 .o-name{font-size:15.5px;color:var(--ink);letter-spacing:.01em;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.o-qty{flex:0 0 auto;font-size:14px;font-weight:600;color:var(--accent-2)}
-.o-by{margin-top:3px;font-size:12px;color:var(--ink-dim);letter-spacing:.02em}
-.o-mine .o-qty{color:#b9554b}
-.o-rm{flex:0 0 auto;border:0;background:transparent;color:var(--ink-dim);cursor:pointer;
-  font-size:15px;padding:8px 4px}
-.o-rm:hover{color:var(--accent-2)}
-.o-dec{flex:0 0 auto;width:30px;height:30px;border-radius:50%;border:1.5px solid rgba(127,184,174,.6);
-  background:#fff;color:var(--accent-2);font-size:17px;line-height:1;cursor:pointer;
-  display:flex;align-items:center;justify-content:center}
-.o-dec:active{transform:scale(.92)}.cart-list li small{color:var(--ink-dim);font-size:12px;margin-left:10px}
+.stepper{flex:0 0 auto;display:flex;align-items:center;gap:9px}
+.stepper .st{width:31px;height:31px;border-radius:50%;border:1.5px solid rgba(127,184,174,.65);
+  background:#fff;color:var(--accent-2);font-size:17px;line-height:1;cursor:pointer;padding:0;
+  display:flex;align-items:center;justify-content:center;transition:.15s}
+.stepper .st:active{transform:scale(.9);background:var(--accent-soft)}
+.stepper .st-off{opacity:.3;cursor:default;border-style:dashed}
+.stepper .st-n{min-width:18px;text-align:center;font-size:15px;font-weight:600;color:var(--ink)}
+.cart-list li small{color:var(--ink-dim);font-size:12px;margin-left:10px}
 .cart-list button{border:0;background:transparent;color:var(--ink-dim);cursor:pointer;font-size:14px;padding:4px 6px}
 .cart-list button:hover{color:var(--accent-2)}
 .cart-empty{justify-content:center!important;color:var(--ink-dim);border:0!important;padding:26px 0!important}
@@ -2041,7 +2038,7 @@ textarea.wish-input{resize:vertical;line-height:1.7}
     if (!quiet) toast("已加入今晚菜单");
   }
   // 减一份：已提交的菜走服务端，本地选择的直接移除
-  function decDish(name) {
+  function changeQty(name, delta) {
     var d = itemByName(name);
     if (d && state.cart.indexOf(itemId(d)) >= 0) {
       removeFromCart(itemId(d));
@@ -2055,7 +2052,7 @@ textarea.wish-input{resize:vertical;line-height:1.7}
         date: state.guest.date,
         name: name,
         who: state.guest.name,
-        delta: -1
+        delta: delta
       })
     }).then(function (r) { return r.json(); })
       .then(function () { loadDayPeek(); })
@@ -2086,18 +2083,26 @@ textarea.wish-input{resize:vertical;line-height:1.7}
     }
     var by = (opt.by || []).filter(Boolean);
     var byTxt = by.length ? by.join("、") : "";
+    var n = opt.qty || 1;
+    var ops;
+    if (opt.rm) {
+      // 还没提交的菜：减号移除，加号置灰（提交后再用服务端加减）
+      ops = '<div class="stepper"><button class="st" data-rm="' + esc(opt.rm) + '" aria-label="移除">−</button>' +
+        '<span class="st-n">' + n + '</span><button class="st st-off" disabled aria-hidden="true">＋</button></div>';
+    } else {
+      ops = '<div class="stepper"><button class="st" data-dec="' + esc(opt.name) + '" aria-label="减一份">−</button>' +
+        '<span class="st-n">' + n + '</span><button class="st" data-inc="' + esc(opt.name) + '" aria-label="加一份">＋</button></div>';
+    }
     return '<li class="o-row' + (opt.mine ? " o-mine" : "") + '">' +
       thumb +
       '<div class="o-info">' +
-        '<div class="o-top"><span class="o-name">' + esc(opt.name) + "</span>" +
-          '<span class="o-qty">×' + (opt.qty || 1) + "</span></div>" +
+        '<div class="o-name">' + esc(opt.name) + "</div>" +
         (byTxt ? '<div class="o-by">' + esc(byTxt) + "</div>" : "") +
       "</div>" +
-      (opt.rm
-        ? '<button class="o-rm" data-rm="' + esc(opt.rm) + '" aria-label="移除">✕</button>'
-        : '<button class="o-dec" data-dec="' + esc(opt.name) + '" aria-label="减一份">−</button>') +
+      ops +
       "</li>";
   }
+
 
   function renderCart() {
     var ul = $("#cartList");
@@ -2207,10 +2212,11 @@ textarea.wish-input{resize:vertical;line-height:1.7}
   document.addEventListener("click", function (e) {
     var add = e.target.closest("[data-order]");
     if (add) { addToCart(add.dataset.order, add.dataset.quiet === "1"); return; }
-    var rm = e.target.closest("[data-rm]");
-    if (rm) { removeFromCart(rm.dataset.rm); return; }
     var dec = e.target.closest("[data-dec]");
-    if (dec) { decDish(dec.dataset.dec); return; }
+    if (dec) { changeQty(dec.dataset.dec, -1); return; }
+    var inc = e.target.closest("[data-inc]");
+    if (inc) { changeQty(inc.dataset.inc, 1); return; }
+    var rm = e.target.closest("[data-rm]");
     if (rm) { removeFromCart(rm.dataset.rm); return; }
     if (e.target.closest("[data-closecart]")) { closeCart(); return; }
     if (e.target.closest("#cartOpen")) { openCart(); return; }

@@ -1133,11 +1133,10 @@ textarea.wish-input{resize:vertical;line-height:1.7}
       <button class="modal-close" data-closecart aria-label="关闭">✕</button>
       <div class="cart-inner">
         <h2 class="cart-title">今晚菜单</h2>
-        <p class="cart-sub">选好了就发给我，我去买菜</p>
+        <p class="cart-sub">想吃的都点上</p>
         <div class="day-peek" id="dayPeek" hidden></div>
         <ul class="cart-list" id="cartList"></ul>
         <div class="cart-form">
-          <input id="cartWho" class="cart-input" placeholder="谁点的（可不填）" maxlength="20" />
           <textarea id="cartNote" class="cart-input cart-note" rows="2" maxlength="200"
             placeholder="备注：少辣 / 不要香菜 / 几点吃（可不填）"></textarea>
           <button id="cartSubmit" class="cart-submit">提交点菜</button>
@@ -1895,8 +1894,7 @@ textarea.wish-input{resize:vertical;line-height:1.7}
       var name = ($("#guestName").value || "").trim() || "神秘来客";
       state.guest = { date: $("#guestDate").value || todayStr(), name: name };
       try { localStorage.setItem("xj_guest", JSON.stringify(state.guest)); } catch (e) {}
-      var who = $("#cartWho");
-      if (who && !who.value) who.value = name;
+
     }
     $("#guest").hidden = true;
     document.body.style.overflow = "";
@@ -2027,7 +2025,7 @@ textarea.wish-input{resize:vertical;line-height:1.7}
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        who: (($("#cartWho") || {}).value || "").trim() || (state.guest && state.guest.name) || "神秘来客",
+        who: (state.guest && state.guest.name) || "神秘来客",
         visit: (state.guest && state.guest.date) || "",
         note: ($("#cartNote") || {}).value || "",
         items: state.cart

@@ -1943,6 +1943,17 @@ textarea.wish-input{resize:vertical;line-height:1.7}
     try { state.guest = JSON.parse(localStorage.getItem("xj_guest") || "null"); } catch (e) { state.guest = null; }
   }
 
+  // 这台设备的身份，用来在重名客人里区分自己
+  function guestId() {
+    var id = "";
+    try { id = localStorage.getItem("xj_guest_id") || ""; } catch (e) {}
+    if (!id) {
+      id = "g" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+      try { localStorage.setItem("xj_guest_id", id); } catch (e) {}
+    }
+    return id;
+  }
+
   function dateLabel(iso) {
     if (!iso) return "今天";
     var parts = iso.split("-");
@@ -2184,6 +2195,7 @@ textarea.wish-input{resize:vertical;line-height:1.7}
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         who: (state.guest && state.guest.name) || "神秘来客",
+        guestId: guestId(),
         visit: (state.guest && state.guest.date) || "",
         note: ($("#cartNote") || {}).value || "",
         items: state.cart
@@ -2199,6 +2211,12 @@ textarea.wish-input{resize:vertical;line-height:1.7}
       btn.disabled = false;
       btn.textContent = "提交点菜";
       if (res && res.id) {
+        if (res.who && state.guest && res.who !== state.guest.name) {
+          state.guest.name = res.who;
+          try { localStorage.setItem("xj_guest", JSON.stringify(state.guest)); } catch (e) {}
+          syncGuestChip();
+          toast("今天你叫「" + res.who + "」");
+        }
         try { localStorage.setItem("xj_last_order", JSON.stringify({ id: res.id, at: Date.now() })); } catch (e) {}
         checkOrder();
       }

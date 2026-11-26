@@ -566,6 +566,20 @@ class H(BaseHTTPRequestHandler):
                 visit = (str(b.get("visit", ""))[:10] or time.strftime("%Y-%m-%d"))
                 who = str(b.get("who", ""))[:40]
                 note = str(b.get("note", ""))[:200]
+                gid = str(b.get("guestId", ""))[:64]
+                # 同一桌里昵称撞车：靠设备 id 区分，重名的自动加后缀
+                for o in d["orders"]:
+                    if o.get("visit") != visit or o.get("status") in ("done", "rejected", "cancelled"):
+                        continue
+                    ids = o.setdefault("guestIds", {})
+                    if who in ids and gid and ids[who] != gid:
+                        base, n = who, 2
+                        while ("%s（%d）" % (base, n)) in ids:
+                            n += 1
+                        who = "%s（%d）" % (base, n)
+                    if gid:
+                        ids[who] = gid
+                    break
                 # 同一天的客人算一桌：已有这一天未结束的单，就并进去
                 existing = None
                 for o in d["orders"]:
@@ -588,6 +602,7 @@ class H(BaseHTTPRequestHandler):
                         else:
                             it["qty"] = 1
                             it["by"] = [who] if who else []
+                            it["byQty"] = {who: 1} if who else {}
                             existing.setdefault("items", []).append(it)
                             index[it["id"]] = it
                     if who:
@@ -598,7 +613,7 @@ class H(BaseHTTPRequestHandler):
                         existing["note"] = (existing.get("note", "") + "；" + note) if existing.get("note") else note
                     existing["updated"] = now
                     save(d)
-                    return self.json({"ok": True, "id": existing["id"], "merged": True, "count": len(existing["items"])})
+                    return self.json({"ok": True, "id": existing["id"], "merged": True, "who": who, "count": len(existing["items"])})
                 for it in picked:
                     it["qty"] = 1
                     it["by"] = [who] if who else []
@@ -610,11 +625,12 @@ class H(BaseHTTPRequestHandler):
                     "visit": visit,
                     "who": who,
                     "guests": [who] if who else [],
+                    "guestIds": ({who: gid} if (who and gid) else {}),
                     "note": note,
                     "items": picked, "status": "new", "reply": "",
                 })
                 save(d)
-                return self.json({"ok": True, "id": new_id, "merged": False})
+                return self.json({"ok": True, "id": new_id, "merged": False, "who": who})
         if p == "/api/day/qty":
             # 调整某人某道菜的份数（delta = -1 减一份，+1 加一份）
             day = str(b.get("date", ""))[:10]

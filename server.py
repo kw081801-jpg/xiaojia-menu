@@ -564,6 +564,8 @@ class H(BaseHTTPRequestHandler):
                 if not picked:
                     return self.json({"error": "菜不在菜单里"}, 400)
                 visit = (str(b.get("visit", ""))[:10] or time.strftime("%Y-%m-%d"))
+                if visit < time.strftime("%Y-%m-%d"):
+                    return self.json({"error": "过去的日子不能点菜"}, 400)
                 who = str(b.get("who", ""))[:40]
                 note = str(b.get("note", ""))[:200]
                 gid = str(b.get("guestId", ""))[:64]

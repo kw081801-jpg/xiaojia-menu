@@ -1933,6 +1933,18 @@ textarea.wish-input{resize:vertical;line-height:1.7}
   });
 
   // ---------- 来客确认 ----------
+  // 过去的日子点不了：给所有日期选择器设下限
+  function lockPastDates() {
+    var today = todayStr();
+    ["coverDate", "guestDate"].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) {
+        el.min = today;
+        if (el.value && el.value < today) el.value = today;
+      }
+    });
+  }
+
   function todayStr() {
     var d = new Date();
     var m = d.getMonth() + 1, day = d.getDate();
@@ -1965,6 +1977,7 @@ textarea.wish-input{resize:vertical;line-height:1.7}
     var dateEl = $("#guestDate");
     var nameEl = $("#guestName");
     if (!g) return;
+    lockPastDates();
     dateEl.value = (state.guest && state.guest.date) || todayStr();
     nameEl.value = (state.guest && state.guest.name) || "神秘来客";
     $("#guestHello").textContent = "「" + dateLabel(dateEl.value) + "」的客人是？";
@@ -1986,6 +1999,7 @@ textarea.wish-input{resize:vertical;line-height:1.7}
       loadDayPeek();
       syncCart();
       syncGuestChip();
+    lockPastDates();
     }
     $("#guest").hidden = true;
     document.body.style.overflow = "";
@@ -2206,6 +2220,10 @@ textarea.wish-input{resize:vertical;line-height:1.7}
   function submitCart() {
     if (!state.cart.length) { toast("先选两道菜"); return; }
     var btn = $("#cartSubmit");
+    if (state.guest && state.guest.date && state.guest.date < todayStr()) {
+      toast("这天已经过了，换一天吧");
+      return;
+    }
     btn.disabled = true;
     btn.textContent = "提交中…";
     fetch("api/orders", {

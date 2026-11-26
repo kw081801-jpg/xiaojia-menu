@@ -615,6 +615,59 @@ class H(BaseHTTPRequestHandler):
                 })
                 save(d)
                 return self.json({"ok": True, "id": new_id, "merged": False})
+        if p == "/api/day/qty":
+            # 调整某人某道菜的份数（delta = -1 减一份，+1 加一份）
+            day = str(b.get("date", ""))[:10]
+            name = str(b.get("name", "")).strip()
+            who = str(b.get("who", ""))[:40]
+            try:
+                delta = int(b.get("delta", -1))
+            except Exception:
+                delta = -1
+            if not day or not name:
+                return self.json({"error": "缺少 date 或 name"}, 400)
+            with LOCK:
+                d = load()
+                order = None
+                for o in d["orders"]:
+                    if o.get("visit") == day and o.get("status") not in ("done", "rejected", "cancelled"):
+                        order = o
+                        break
+                if order is None:
+                    return self.json({"error": "这天没有订单"}, 404)
+                target = None
+                for it in order.get("items", []):
+                    if it.get("name") == name:
+                        target = it
+                        break
+                if target is None:
+                    return self.json({"error": "单里没有这道菜"}, 404)
+                q = dict(target.get("byQty") or {})
+                cur = int(q.get(who, 0)) if who else int(target.get("qty", 1))
+                if who and delta < 0 and cur <= 0:
+                    return self.json({"error": "你没有点这道菜"}, 400)
+                newq = cur + delta
+                if who:
+                    if newq <= 0:
+                        q.pop(who, None)
+                    else:
+                        q[who] = newq
+                    target["byQty"] = q
+                target["qty"] = max(0, int(target.get("qty", 1)) + delta)
+                by = [x for x in (target.get("by") or [])]
+                if who:
+                    if newq <= 0 and who in by:
+                        by.remove(who)
+                    elif newq > 0 and who not in by:
+                        by.append(who)
+                target["by"] = by
+                if target["qty"] <= 0:
+                    order["items"] = [x for x in order["items"] if x is not target]
+                if not order["items"]:
+                    d["orders"] = [o for o in d["orders"] if o is not order]
+                order["updated"] = time.strftime("%Y-%m-%d %H:%M")
+                save(d)
+                return self.json({"ok": True, "removed": target["qty"] <= 0})
         if p == "/api/wishes":
             dish = str(b.get("dish", "")).strip()[:60]
             if not dish:

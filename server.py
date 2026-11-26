@@ -485,7 +485,8 @@ class H(BaseHTTPRequestHandler):
             if not found:
                 return self.json({"date": day, "orderId": None, "items": [], "guests": [], "note": ""})
             items = [{"name": it.get("name", ""), "qty": int(it.get("qty", 1)),
-                      "by": it.get("by", [])} for it in found.get("items", [])]
+                      "by": it.get("by", []), "byQty": it.get("byQty", {})}
+                     for it in found.get("items", [])]
             return self.json({
                 "date": day,
                 "orderId": found.get("id"),
@@ -581,6 +582,9 @@ class H(BaseHTTPRequestHandler):
                             by = cur.setdefault("by", [])
                             if who and who not in by:
                                 by.append(who)
+                            qby = cur.setdefault("byQty", {})
+                            if who:
+                                qby[who] = int(qby.get(who, 0)) + 1
                         else:
                             it["qty"] = 1
                             it["by"] = [who] if who else []
@@ -598,6 +602,7 @@ class H(BaseHTTPRequestHandler):
                 for it in picked:
                     it["qty"] = 1
                     it["by"] = [who] if who else []
+                    it["byQty"] = {who: 1} if who else {}
                 new_id = (max([int(o.get("id") or 0) for o in d["orders"]] or [0])) + 1
                 d["orders"].append({
                     "id": new_id,

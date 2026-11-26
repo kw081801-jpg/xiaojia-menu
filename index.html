@@ -1125,7 +1125,7 @@ textarea.wish-input{resize:vertical;line-height:1.7}
   </div>
 
   <div id="cartBar" class="cart-bar" hidden>
-    <span class="cart-count">我 <b>0</b> · 这桌 <b id="tableTotal">0</b></span>
+    <span class="cart-count">我 <b>0</b> 份 · 这桌 <b id="tableTotal">0</b> 道</span>
     <button id="cartOpen" class="cart-btn">看菜单</button>
   </div>
 
@@ -1224,7 +1224,7 @@ textarea.wish-input{resize:vertical;line-height:1.7}
     sound: localStorage.getItem("xj_sound") !== "0",
     cart: [],
     dayItems: [],
-    myOrdered: [],
+    myOrdered: {},
     guest: null,
     online: false,
     random: { stage: "pick", filter: null, chosen: false, revealed: false, current: null, last: null }
@@ -1514,20 +1514,20 @@ textarea.wish-input{resize:vertical;line-height:1.7}
       content.innerHTML = '<div class="empty">没有找到匹配的菜<br>换个关键词试试</div>';
     }
     countEl.textContent = "共 " + shown + " 道" + (q ? "（搜索「" + state.query.trim() + "」）" : "");
-    if (state.myOrdered && state.myOrdered.length) markOrdered();
+    if (state.myOrdered && Object.keys(state.myOrdered).length) markOrdered();
   }
 
   // 已经点过的菜，加号变成对勾
   function markOrdered() {
-    var names = state.myOrdered || [];
+    var mine = state.myOrdered || {};
     document.querySelectorAll(".card-add").forEach(function (btn) {
       var card = btn.closest(".card");
       var nameEl = card ? card.querySelector(".card-name") : null;
       var name = nameEl ? nameEl.textContent : "";
-      var hit = names.indexOf(name) >= 0;
-      btn.classList.toggle("ordered", hit);
-      btn.textContent = hit ? "✓" : "＋";
-      btn.setAttribute("aria-label", hit ? "已经点过" : "加入今晚菜单");
+      var n = mine[name] || 0;
+      btn.classList.toggle("ordered", n > 0);
+      btn.textContent = n > 0 ? "✓" + n : "＋";
+      btn.setAttribute("aria-label", n > 0 ? "你已点 " + n + " 份" : "加入今晚菜单");
     });
   }
 
@@ -1949,7 +1949,9 @@ textarea.wish-input{resize:vertical;line-height:1.7}
   function syncCart() {
     var bar = $("#cartBar");
     if (!bar) return;
-    var mine = state.cart.length + (state.myOrdered || []).length;
+    var ordered = state.myOrdered || {};
+    var myQty = Object.keys(ordered).reduce(function (s, k) { return s + (Number(ordered[k]) || 0); }, 0);
+    var mine = state.cart.length + myQty;
     var names = {};
     (state.dayItems || []).forEach(function (i) { if (i && i.name) names[i.name] = 1; });
     state.cart.forEach(function (id) {
@@ -2004,15 +2006,18 @@ textarea.wish-input{resize:vertical;line-height:1.7}
         syncCart();
         if (!items.length) { box.hidden = true; return; }
         var me = (state.guest && state.guest.name) || "";
-        var byPerson = {};
+        var byPerson = {};   // 人名 -> [菜名×份数]
+        var qtyOf = {};      // 人名 -> { 菜名: 份数 }
         var order = [];
         items.forEach(function (i) {
-          var label = i.name;
           var who = (i.by && i.by.length) ? i.by : [""];
           who.forEach(function (p) {
+            var n = (i.byQty && i.byQty[p]) ? Number(i.byQty[p]) : 1;
+            var label = i.name + (n > 1 ? " ×" + n : "");
             if (!p) { byPerson[""] = (byPerson[""] || []).concat(label); return; }
-            if (!byPerson[p]) { byPerson[p] = []; order.push(p); }
+            if (!byPerson[p]) { byPerson[p] = []; qtyOf[p] = {}; order.push(p); }
             byPerson[p].push(label);
+            qtyOf[p][i.name] = (qtyOf[p][i.name] || 0) + n;
           });
         });
         var lines = order.map(function (p) {
@@ -2025,7 +2030,7 @@ textarea.wish-input{resize:vertical;line-height:1.7}
             esc(byPerson[""].join("、")) + "</span></p>");
         }
         // 自己已经点过的菜，顺手标到卡片上，免得重复点
-        state.myOrdered = (me && byPerson[me]) ? byPerson[me] : [];
+        state.myOrdered = (me && qtyOf[me]) ? qtyOf[me] : {};
         markOrdered();
         syncCart();
         if (!lines.length) { box.hidden = true; return; }
